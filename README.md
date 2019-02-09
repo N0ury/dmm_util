@@ -16,6 +16,7 @@ many things have been added as we go along. So the code is not optimal.
 ./python3_dmm_util.py or python3 python3_dmm_util.py
 This gives help.
 
-Copyright  
+**Copyright**
+
 Copyright © 2011 Fredrik Valeur.  
 Copyright © 2017-2019 nbenm.  
