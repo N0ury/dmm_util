@@ -19,4 +19,4 @@ This gives help.
 **Copyright**
 
 Copyright © 2011 Fredrik Valeur.  
-Copyright © 2017-2019 nbenm.  
+Copyright © 2017-2019 N0ury.  
