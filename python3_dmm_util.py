@@ -23,8 +23,8 @@ def usage():
 
 def do_sync_time():
   lt = timegm(datetime.datetime.now().utctimetuple())
-  cmd = 'mp clock,' + str(lt) + '\r'
-  ser.write(cmd.encode())
+  cmd = 'mp clock,' + str(lt)
+  ser.write(cmd.encode()+b'\r')
   time.sleep (0.1)
   res=ser.read(2)
   if res == b'0\r': print ("Sucsessfully synced the clock of the DMM")
@@ -76,7 +76,7 @@ def do_set():
     usage()
     sys.exit()
   cmd = 'mpq ' + property + ",'" + value + "'\r"
-  ser.write(cmd)
+  ser.write(cmd.encode())
   time.sleep (0.1)
   res=ser.read(2)
   if res[0] == '0': print ("Sucsessfully set",property, "value")
