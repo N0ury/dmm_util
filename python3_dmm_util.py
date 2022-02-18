@@ -498,7 +498,7 @@ def meter_command(cmd):
 
 
 argc = len(sys.argv)
-if argc == 2:
+if argc <= 2:
    usage();
    exit
 
