@@ -10,14 +10,14 @@ import datetime
 from calendar import timegm
 
 def usage():
-  print ("Usage: dmm_util info                                        : Display info about the meter")
-  print ("       dmm_util recordings [index|name] ...                 : Display one or all recordings (index from 0)")
-  print ("       dmm_util saved_measurements [index|name] ...         : Display one or all saved measurements (index from 0)")
-  print ("       dmm_util saved_min_max [index|name] ...              : Display one or all saved min max measurements (index from 0)")
-  print ("       dmm_util saved_peak [index|name] ...                 : Display one or all saved peak measurements (index from 0)")
-  print ("       dmm_util measure_now                                 : Display the current meter value" )
-  print ("       dmm_util set <company|contact|operator|site> <value> : Set meter contact info")
-  print ("       dmm_util sync_time                                   : Sync the clock on the DMM to the computer clock")
+  print ("Usage: dmm_util <usb port> info                                        : Display info about the meter")
+  print ("       dmm_util <usb port> recordings [index|name] ...                 : Display one or all recordings (index from 0)")
+  print ("       dmm_util <usb port> saved_measurements [index|name] ...         : Display one or all saved measurements (index from 0)")
+  print ("       dmm_util <usb port> saved_min_max [index|name] ...              : Display one or all saved min max measurements (index from 0)")
+  print ("       dmm_util <usb port> saved_peak [index|name] ...                 : Display one or all saved peak measurements (index from 0)")
+  print ("       dmm_util <usb port> measure_now                                 : Display the current meter value" )
+  print ("       dmm_util <usb port> set <company|contact|operator|site> <value> : Set meter contact info")
+  print ("       dmm_util <usb port> sync_time                                   : Sync the clock on the DMM to the computer clock")
   print ("")
   sys.exit()
 
@@ -67,9 +67,9 @@ def qddb():
   }
 
 def do_set():
-  property = sys.argv[2]
-  value = sys.argv[3]
-  if argc != 4:
+  property = sys.argv[3]
+  value = sys.argv[4]
+  if argc != 5:
     usage()
     sys.exit()
   if property not in ["company", "site", "operator", "contact"]:
@@ -316,10 +316,10 @@ def do_saved_min_max_peak(field, cmd):
   for i in range(0,nb_min_max):
     interval.append(str(i))
   found = False
-  if argc == 2:
+  if argc == 3:
     series = interval
   else:
-    series = sys.argv[2:]
+    series = sys.argv[3:]
 
   for i in series:
     if i.isdigit():
@@ -338,12 +338,12 @@ def do_saved_min_max_peak(field, cmd):
     sys.exit()
 
 def print_min_max_peak(measurement):
-  print (measurement['name'], 'start', time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['ts1']), measurement['autorange'], 'Range', int(measurement['range_max ']), measurement['unit'])
+  print ((measurement['name']).decode('utf-8'), 'start', time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['ts1']), measurement['autorange'], 'Range', int(measurement['range_max ']), measurement['unit'])
   print_min_max_peak_detail(measurement, 'PRIMARY')
   print_min_max_peak_detail(measurement, 'MAXIMUM')
   print_min_max_peak_detail(measurement, 'AVERAGE')
   print_min_max_peak_detail(measurement, 'MINIMUM')
-  print (measurement['name'], 'end', time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['ts2']))
+  print ((measurement['name']).decode('utf-8'), 'end', time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['ts2']))
 
 def print_min_max_peak_detail(measurement, detail):
   print ('\t',detail, \
@@ -357,15 +357,15 @@ def do_saved_measurements():
   for i in range(0,nb_measurements):
     interval.append(str(i))
   found = False
-  if argc == 2:
+  if argc == 3:
     series = interval
   else:
-    series = sys.argv[2:]
+    series = sys.argv[3:]
 
   for i in series:
     if i.isdigit():
       measurement = qsmr(str(i))
-      print (measurement['name'], \
+      print ((measurement['name']).decode('utf-8'), \
           time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['readings']['PRIMARY']['ts']), \
           ":", \
           measurement['readings']['PRIMARY']['value'], \
@@ -392,10 +392,10 @@ def do_recordings():
   for i in range(0,nb_recordings):
     interval.append(str(i))
   found = False
-  if argc == 2:
+  if argc == 3:
     series = interval
   else:
-    series = sys.argv[2:]
+    series = sys.argv[3:]
 
   for i in series:
     if i.isdigit():
@@ -498,7 +498,7 @@ def meter_command(cmd):
 
 
 argc = len(sys.argv)
-if argc == 1:
+if argc == 2:
    usage();
    exit
 
@@ -506,16 +506,16 @@ switch={'recordings':do_recordings,'saved_measurements':do_saved_measurements,'s
 
 #serial port settings
 try:
-  ser = serial.Serial(port='/dev/cu.usbserial-AK05FTGH', baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=0.01, rtscts=False, dsrdtr=False)
+  ser = serial.Serial(port=sys.argv[1], baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=0.01, rtscts=False, dsrdtr=False)
 except serial.serialutil.SerialException as err:
-  print ('Serial Port /dev/cu.usbserial-AK05FTGH does not respond')
+  print ('Serial Port ' + sys.argv[1] + ' does not respond')
   print (err)
   sys.exit()
 
 map_cache = {}
 
-if sys.argv[1] in switch:
-  switch[sys.argv[1]]()
+if sys.argv[2] in switch:
+  switch[sys.argv[2]]()
 else:
   usage()
   sys.exit()
