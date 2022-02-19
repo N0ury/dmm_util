@@ -1,5 +1,12 @@
 # dmm_util
-dmm_util is a utility for downloading saved measurements from Fluke 289 and 287 Series multimeters.
+dmm_util is a utility for interacting with Fluke 289 and 287 Series multimeters.
+You can:
+- download saved measurements
+- download saved recordings
+- download saved min-max
+- download peaks
+- set date and time
+- set internal data such as company,contact,operator,or site
 
 This is a complete rewrite of [Fredrik Valeur dmm_util](https://github.com/fvaleur/dmm_util)  
 Previous one was written in Ruby. This one is written in Python 3.  
