@@ -116,7 +116,7 @@ def qsrr(reading_idx, sample_idx):
     'start_ts' :  parse_time(get_double(res, 0)),
     'end_ts' :  parse_time(get_double(res, 8)),
     'readings' : parse_readings(res[16:16 + 30*3]),
-    'duration' : get_u16(res, 106) * 0.1,
+    'duration' : round(get_u16(res, 106) * 0.1,5),
     'un2' : get_u16(res, 108),
     'readings2' : parse_readings(res[110:110 +30]),
     'record_type' :  get_map_value('recordtype', res, 140),
@@ -206,7 +206,7 @@ def get_double(string, offset):
   endian_l = string[offset+3:offset-1:-1] if offset > 0 else string[offset+3::-1]
   endian_h = string[offset+7:offset+3:-1]
   endian = endian_l + endian_h
-  return struct.unpack('!d', endian)[0]
+  return round(struct.unpack('!d', endian)[0],5)
 
 def get_time(string, offset):
   return parse_time(get_double(string, offset))
@@ -400,20 +400,20 @@ def do_recordings():
   for i in series:
     if i.isdigit():
       recording = qrsi(str(i))
-      print ("%s (detail) [%s - %s] : %d measurements" % (recording['name'],time.strftime('%Y-%m-%d %H:%M:%S %z',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S %z',recording['end_ts']),recording['num_samples']))
+      print ("%s (detail) [%s - %s] : %d measurements" % ((recording['name']).decode(),time.strftime('%Y-%m-%d %H:%M:%S %z',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S %z',recording['end_ts']),recording['num_samples']))
 
       for k in range(0,recording['num_samples']):
         measurement = qsrr(str(recording['reading_index']), str(k))
         print (time.strftime('%Y-%m-%d %H:%M:%S %z', measurement['start_ts']), \
-              measurement['readings2']['PRIMARY']['value'], \
+              str(measurement['readings2']['PRIMARY']['value']), \
               measurement['readings2']['PRIMARY']['unit'], \
-              measurement['readings']['MAXIMUM']['value'], \
+              str(measurement['readings']['MAXIMUM']['value']), \
               measurement['readings']['MAXIMUM']['unit'], \
-              measurement['readings']['AVERAGE']['value'], \
+              str(measurement['readings']['AVERAGE']['value']), \
               measurement['readings']['AVERAGE']['unit'], \
-              measurement['readings']['MINIMUM']['value'], \
+              str(measurement['readings']['MINIMUM']['value']), \
               measurement['readings']['MINIMUM']['unit'], \
-              measurement['duration'],)
+              str(measurement['duration']),end=' ')
         print ('INTERVAL' if measurement['record_type'] == 'INTERVAL' else measurement['stable'])
       print
       found = True
@@ -426,15 +426,15 @@ def do_recordings():
           for k in range(0,recording['num_samples']):
             measurement = qsrr(str(recording['reading_index']), str(k))
             print (time.strftime('%Y-%m-%d %H:%M:%S %z', measurement['start_ts']), \
-                  measurement['readings2']['PRIMARY']['value'], \
+                  str(measurement['readings2']['PRIMARY']['value']), \
                   measurement['readings2']['PRIMARY']['unit'], \
-                  measurement['readings']['MAXIMUM']['value'], \
+                  str(measurement['readings']['MAXIMUM']['value']), \
                   measurement['readings']['MAXIMUM']['unit'], \
-                  measurement['readings']['AVERAGE']['value'], \
+                  str(measurement['readings']['AVERAGE']['value']), \
                   measurement['readings']['AVERAGE']['unit'], \
-                  measurement['readings']['MINIMUM']['value'], \
+                  str(measurement['readings']['MINIMUM']['value']), \
                   measurement['readings']['MINIMUM']['unit'], \
-                  measurement['duration'],)
+                  str(measurement['duration']),end=' ')
             print ('INTERVAL' if measurement['record_type'] == 'INTERVAL' else measurement['stable'])
           print
           break
