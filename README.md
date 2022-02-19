@@ -7,6 +7,7 @@ You can:
 - download peaks
 - set date and time
 - set internal data such as company,contact,operator,or site
+- display realtime measurements
 
 This is a complete rewrite of [Fredrik Valeur dmm_util](https://github.com/fvaleur/dmm_util)  
 Previous one was written in Ruby. This one is written in Python 3.  
