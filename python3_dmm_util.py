@@ -11,13 +11,14 @@ from calendar import timegm
 
 def usage():
   print ("Usage: dmm_util <usb port> info                                        : Display info about the meter")
-  print ("       dmm_util <usb port> recordings [index|name] ...                 : Display one or all recordings (index from 0)")
+  print ("       dmm_util <usb port> recordings [index|name|list] ...            : Display one or all recordings (index from 0)")
   print ("       dmm_util <usb port> saved_measurements [index|name] ...         : Display one or all saved measurements (index from 0)")
-  print ("       dmm_util <usb port> saved_min_max [index|name] ...              : Display one or all saved min max measurements (index from 0)")
-  print ("       dmm_util <usb port> saved_peak [index|name] ...                 : Display one or all saved peak measurements (index from 0)")
+  print ("       dmm_util <usb port> saved_min_max [index|name|list] ...         : Display one or all saved min max measurements (index from 0)")
+  print ("       dmm_util <usb port> saved_peak [index|name|list] ...            : Display one or all saved peak measurements (index from 0)")
   print ("       dmm_util <usb port> measure_now                                 : Display the current meter value" )
   print ("       dmm_util <usb port> set <company|contact|operator|site> <value> : Set meter contact info")
   print ("       dmm_util <usb port> sync_time                                   : Sync the clock on the DMM to the computer clock")
+  print ("'list' option lists the index, duration and name of the corresponding recordings")
   print ("")
   sys.exit()
 
@@ -33,7 +34,7 @@ def do_measure_now():
   while True:
     try:
       res = qddb()
-      print (time.strftime('%Y-%m-%d %H:%M:%S %z',res['readings']['LIVE']['ts']), \
+      print (time.strftime('%Y-%m-%d %H:%M:%S',res['readings']['LIVE']['ts']), \
             ":", \
             res['readings']['LIVE']['value'], \
             res['readings']['LIVE']['unit'], \
@@ -87,7 +88,7 @@ def do_info():
   print ("Model:",info['model_number'])
   print ("Software Version:",info['software_version'])
   print ("Serial Number:",info['serial_number'])
-  print ("Current meter time:",time.strftime('%Y-%m-%d %H:%M:%S %z',time.gmtime(int(clock()))))
+  print ("Current meter time:",time.strftime('%Y-%m-%d %H:%M:%S',time.gmtime(int(clock()))))
   print ("Company:",meter_command("qmpq company")[0].lstrip("'").rstrip("'"))
   print ("Contact:",meter_command("qmpq contact")[0].lstrip("'").rstrip("'"))
   print ("Operator:",meter_command("qmpq operator")[0].lstrip("'").rstrip("'"))
@@ -108,6 +109,7 @@ def clock():
 def qsrr(reading_idx, sample_idx):
 #  print "in qsrr reading_idx=",reading_idx,",sample_idx",sample_idx
   res = meter_command("qsrr " + reading_idx + "," + sample_idx)
+  #print ('res',res)
 
   if len(res) != 146:
     raise ValueError('By app: Invalid block size: %d should be 146' % (len(res)))
@@ -116,7 +118,7 @@ def qsrr(reading_idx, sample_idx):
     'start_ts' :  parse_time(get_double(res, 0)),
     'end_ts' :  parse_time(get_double(res, 8)),
     'readings' : parse_readings(res[16:16 + 30*3]),
-    'duration' : round(get_u16(res, 106) * 0.1,5),
+    'duration' : round(get_u16(res, 106),5),
     'un2' : get_u16(res, 108),
     'readings2' : parse_readings(res[110:110 +30]),
     'record_type' :  get_map_value('recordtype', res, 140),
@@ -125,7 +127,7 @@ def qsrr(reading_idx, sample_idx):
   }
 
 def parse_readings(reading_bytes):
-#  print "in parse_readings,reading_bytes=",reading_bytes,"lgr:",len(reading_bytes)
+  #print ("in parse_readings,reading_bytes=",reading_bytes,"lgr:",len(reading_bytes))
   readings = {}
   chunks, chunk_size = len(reading_bytes), 30
   l = [ reading_bytes[i:i+chunk_size] for i in range(0, chunks, chunk_size) ]
@@ -152,7 +154,7 @@ def get_map_value(map_name, string, offset):
   value = str(get_u16(string, offset))
   if value not in map:
     raise ValueError('By app: Can not find key %s in map %s' % (value, map_name))
-#  print "--->",map_name,value,map[value]
+  #print ("--->",map_name,value,map[value])
   return map[value]
 
 def get_multimap_value(map_name, string, offset):
@@ -214,9 +216,15 @@ def get_time(string, offset):
 def parse_time(t):
   return time.gmtime(t)
 
-def qrsi(idx):
+def qrsi(idx, list=False):
   res = meter_command('qrsi '+idx)
   reading_count = get_u16(res, 76)
+  if list:
+    duration = time.mktime(parse_time(get_double(res, 12))) \
+               - time.mktime(parse_time(get_double(res, 4)))
+    duration = str(datetime.timedelta(seconds=duration))
+    print ('%s\t%s\t\t%s' % (idx, duration, res[(78 + reading_count * 30):].decode()))
+    return
 #  print "reading_count",reading_count
   if len(res) < reading_count * 30 + 78:
     raise ValueError('By app: qrsi parse error, expected at least %d bytes, got %d' % (reading_count * 30 + 78, len(res)))
@@ -252,8 +260,8 @@ def qrsi(idx):
 def qsmr(idx):
   # Get saved measurement
   res = meter_command('qsmr '+idx)
-
   reading_count = get_u16(res, 36)
+
   if len(res) < reading_count * 30 + 38:
     raise ValueError('By app: qsmr parse error, expected at least %d bytes, got %d' % (reading_count * 30 + 78, len(res)))
 
@@ -277,10 +285,16 @@ def qsmr(idx):
     'name' : res[(38 + reading_count * 30):]
   }
 
-def do_min_max_cmd(cmd, idx):
+def do_min_max_cmd(cmd, idx, list=False):
   res = meter_command(cmd + " " + idx)
   # un8 = 0, un2 = 0, always bolt
   reading_count = get_u16(res, 52)
+  if list:
+    duration = time.mktime(parse_time(get_double(res, 12))) \
+               - time.mktime(parse_time(get_double(res, 4)))
+    duration = str(datetime.timedelta(seconds=duration))
+    print ('%s\t%s\t\t%s' % (idx, duration, res[(54 + reading_count * 30):].decode()))
+    return
   if len(res) < reading_count * 30 + 54:
     raise ValueError('By app: qsmr parse error, expected at least %d bytes, got %d' % (reading_count * 30 + 54, len(res)))
 
@@ -312,6 +326,12 @@ def do_saved_min_max():
 
 def do_saved_min_max_peak(field, cmd):
   nb_min_max = int(qsls()[field])
+  if argc == 4:
+    if sys.argv[3] == 'list':
+      print ('#\tduration\tname')
+      for i in range (0,nb_min_max):
+        do_min_max_cmd(cmd,str(i), True)
+      sys.exit()
   interval = []
   for i in range(0,nb_min_max):
     interval.append(str(i))
@@ -338,18 +358,18 @@ def do_saved_min_max_peak(field, cmd):
     sys.exit()
 
 def print_min_max_peak(measurement):
-  print ((measurement['name']).decode('utf-8'), 'start', time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['ts1']), measurement['autorange'], 'Range', int(measurement['range_max ']), measurement['unit'])
+  print ((measurement['name']).decode('utf-8'), 'start', time.strftime('%Y-%m-%d %H:%M:%S',measurement['ts1']), measurement['autorange'], 'Range', int(measurement['range_max ']), measurement['unit'])
   print_min_max_peak_detail(measurement, 'PRIMARY')
   print_min_max_peak_detail(measurement, 'MAXIMUM')
   print_min_max_peak_detail(measurement, 'AVERAGE')
   print_min_max_peak_detail(measurement, 'MINIMUM')
-  print ((measurement['name']).decode('utf-8'), 'end', time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['ts2']))
+  print ((measurement['name']).decode('utf-8'), 'end', time.strftime('%Y-%m-%d %H:%M:%S',measurement['ts2']))
 
 def print_min_max_peak_detail(measurement, detail):
   print ('\t',detail, \
         measurement['readings'][detail]['value'], \
         measurement['readings'][detail]['unit'], \
-        time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['readings'][detail]['ts']))
+        time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings'][detail]['ts']))
 
 def do_saved_measurements():
   nb_measurements = int(qsls()['nb_measurements'])
@@ -366,7 +386,7 @@ def do_saved_measurements():
     if i.isdigit():
       measurement = qsmr(str(i))
       print ((measurement['name']).decode('utf-8'), \
-          time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['readings']['PRIMARY']['ts']), \
+          time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings']['PRIMARY']['ts']), \
           ":", \
           measurement['readings']['PRIMARY']['value'], \
           measurement['readings']['PRIMARY']['unit'])
@@ -377,7 +397,7 @@ def do_saved_measurements():
         if measurement['name'] == i.encode():
           found = True
           print (measurement['name'], \
-              time.strftime('%Y-%m-%d %H:%M:%S %z',measurement['readings']['PRIMARY']['ts']), \
+              time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings']['PRIMARY']['ts']), \
               ":", \
               measurement['readings']['PRIMARY']['value'], \
               measurement['readings']['PRIMARY']['unit'])
@@ -388,6 +408,12 @@ def do_saved_measurements():
 
 def do_recordings():
   nb_recordings = int(qsls()['nb_recordings'])
+  if argc == 4:
+    if sys.argv[3] == 'list':
+      print ('#\tduration\tname')
+      for i in range (0,nb_recordings):
+        qrsi(str(i), True)
+      sys.exit()
   interval = []
   for i in range(0,nb_recordings):
     interval.append(str(i))
@@ -400,16 +426,21 @@ def do_recordings():
   for i in series:
     if i.isdigit():
       recording = qrsi(str(i))
-      print ("%s (detail) [%s - %s] : %d measurements" % ((recording['name']).decode(),time.strftime('%Y-%m-%d %H:%M:%S %z',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S %z',recording['end_ts']),recording['num_samples']))
+      #print ('recording',recording)
+      print ("%s (detail) [%s - %s] : %d measurements" % ((recording['name']).decode(),time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts']),recording['num_samples']))
 
       for k in range(0,recording['num_samples']):
         measurement = qsrr(str(recording['reading_index']), str(k))
-        print (time.strftime('%Y-%m-%d %H:%M:%S %z', measurement['start_ts']), \
+        #print ('measurement',measurement)
+        duration = str(round(measurement['readings']['AVERAGE']['value'] \
+            / measurement['duration'],measurement['readings']['AVERAGE']['decimals'])) \
+            if measurement['duration'] != 0 else 0
+        print (time.strftime('%Y-%m-%d %H:%M:%S', measurement['start_ts']), \
               str(measurement['readings2']['PRIMARY']['value']), \
               measurement['readings2']['PRIMARY']['unit'], \
               str(measurement['readings']['MAXIMUM']['value']), \
               measurement['readings']['MAXIMUM']['unit'], \
-              str(measurement['readings']['AVERAGE']['value']), \
+              duration, \
               measurement['readings']['AVERAGE']['unit'], \
               str(measurement['readings']['MINIMUM']['value']), \
               measurement['readings']['MINIMUM']['unit'], \
@@ -420,17 +451,23 @@ def do_recordings():
     else:
       for j in interval:
         recording = qrsi(str(j))
+#        print ('recording',recording)
         if recording['name'] == i.encode():
           found = True
-          print ("%s (detail) [%s - %s] : %d measurements" % (recording['name'],time.strftime('%Y-%m-%d %H:%M:%S %z',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S %z',recording['end_ts']),recording['num_samples']))
+          print ("%s (detail) [%s - %s] : %d measurements" % (recording['name'],time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts']),recording['num_samples']))
           for k in range(0,recording['num_samples']):
             measurement = qsrr(str(recording['reading_index']), str(k))
-            print (time.strftime('%Y-%m-%d %H:%M:%S %z', measurement['start_ts']), \
+#            print ('measurement',measurement)
+            duration = str(round(measurement['readings']['AVERAGE']['value'] \
+                / measurement['duration'],
+                  measurement['readings']['AVERAGE']['decimals'])) \
+                if measurement['duration'] != 0 else 0
+            print (time.strftime('%Y-%m-%d %H:%M:%S', measurement['start_ts']), \
                   str(measurement['readings2']['PRIMARY']['value']), \
                   measurement['readings2']['PRIMARY']['unit'], \
                   str(measurement['readings']['MAXIMUM']['value']), \
                   measurement['readings']['MAXIMUM']['unit'], \
-                  str(measurement['readings']['AVERAGE']['value']), \
+                  duration, \
                   measurement['readings']['AVERAGE']['unit'], \
                   str(measurement['readings']['MINIMUM']['value']), \
                   measurement['readings']['MINIMUM']['unit'], \
@@ -474,7 +511,8 @@ def read_retry():
   if len(data) > 1:
     raise ValueError('By app: Error parsing status from meter:  %c %d %r %r' % (chr(data[0]),len(data),chr(data[1]) == '\r', chr(data[-1]) == '\r'))
   else:
-    raise ValueError('By app: Error parsing status from meter, no data')
+    print ("No communication with the meter. Exiting...")
+    sys.exit()
 
 def meter_command(cmd):
 #  print ("cmd=",cmd)
