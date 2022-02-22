@@ -16,7 +16,7 @@ def usage():
   print ("       dmm_util <usb port> saved_min_max [{list | <index value...> | name <value...>}] : Display one,some or all saved min max measurements")
   print ("       dmm_util <usb port> saved_peak [{list | <index value...> | name <value...>}]    : Display one,some or all saved peak measurements")
   print ("       dmm_util <usb port> measure_now                                                 : Display the current meter value" )
-  print ("       dmm_util <usb port> set <company|contact|operator|site> <value>                 : Set meter contact info")
+  print ("       dmm_util <usb port> set {company | contact | operator | site} <value>           : Set meter contact info")
   print ("       dmm_util <usb port> sync_time                                                   : Sync the clock on the DMM to the computer clock")
   print ("")
   print ("If index is used, it starts at 1")
@@ -333,7 +333,7 @@ def do_saved_min_max_peak(field, cmd):
         d, h = divmod(h, 24)
         name = measurement['name'].decode()
         debut_d = time.strftime('%Y-%m-%d %H:%M:%S',measurement['ts1'])
-        print(f'{i:d}\t{debut_d}\t{d:d}:{h:02d}:{m:02d}:{s:02d}\t{name}')
+        print(f'{i:d}\t{debut_d}\t{d:02d}:{h:02d}:{m:02d}:{s:02d}\t{name}')
       sys.exit()
   interval = []
   for i in range(1,nb_min_max+1):
@@ -428,7 +428,7 @@ def do_recordings():
         sample_interval = recording['sample_interval']
         num_samples = recording['num_samples']
         debut_d = time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts'])
-        print(f'{i:d}\t{debut_d}\t{d:d}:{h:02d}:{m:02d}:{s:02d}\t{name}\t{num_samples}')
+        print(f'{i:d}\t{debut_d}\t{d:02d}:{h:02d}:{m:02d}:{s:02d}\t{name}\t{num_samples}')
       sys.exit()
   interval = []
   for i in range(1,nb_recordings + 1):
