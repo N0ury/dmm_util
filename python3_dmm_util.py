@@ -515,11 +515,11 @@ def data_is_ok(data):
 
   # Non-OK status with extra data on end
   if len(data) > 2 and chr(data[0]) != '0':
-    raise ValueError('By app: Error parsing status from meter (Non-OK status with extra data on end)')
+    raise ValueError('By app: Error parsing status from DMM (Non-OK status with extra data on end)')
 
   # We should now be in OK state
   if not data.startswith(b"0\r"):
-    raise ValueError('By app: Error parsing status from meter (status:%c size:%d)' % (data[0], len(data)))
+    raise ValueError('By app: Error parsing status from DMM (status:%c size:%d)' % (data[0], len(data)))
 
   return len(data) >= 4 and chr(data[-1]) == '\r'
 
@@ -536,9 +536,9 @@ def read_retry():
     time.sleep (0.01)
     retry_count += 1
   if len(data) > 1:
-    raise ValueError('By app: Error parsing status from meter:  %c %d %r %r' % (chr(data[0]),len(data),chr(data[1]) == '\r', chr(data[-1]) == '\r'))
+    raise ValueError('By app: Error parsing status from DMM:  %c %d %r %r' % (chr(data[0]),len(data),chr(data[1]) == '\r', chr(data[-1]) == '\r'))
   else:
-    print ("No communication with the meter. Exiting...")
+    print ("No communication with the DMM. Exiting...")
     sys.exit()
 
 def meter_command(cmd):
@@ -546,14 +546,14 @@ def meter_command(cmd):
   ser.write(cmd.encode()+b'\r')
   data = read_retry()
   if data == b'':
-    raise ValueError('By app: Did not receive data from meter')
+    raise ValueError('By app: Did not receive data from DMM')
   status = chr(data[0])
   if status != '0':
 #    print ("Command: %s failed. Status=%c" % (cmd, status))
     print ("Invalid value")
     sys.exit()
   if chr(data[1]) != '\r':
-    raise ValueError('By app: Did not receive complete reply from meter')
+    raise ValueError('By app: Did not receive complete reply from DMM')
   binary = data[2:4] == b'#0'
 
   if binary:
