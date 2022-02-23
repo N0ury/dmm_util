@@ -439,11 +439,13 @@ def do_recordings():
   else:
     series = sys.argv[3:]
 
+  sep = '\t'
   for i in series:
     if i.isdigit():
       recording = qrsi(str(int(i)-1))
       # print ('recording',recording)
       print ("%s (detail) [%s - %s] : %d measurements" % ((recording['name']).decode(),time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts']),recording['num_samples']))
+      print ('Time','Primary','','Maximum','','Average','','Minimum','','#samples','Type',sep=sep)
 
       for k in range(0,recording['num_samples']):
         measurement = qsrr(str(recording['reading_index']), str(k))
@@ -451,16 +453,16 @@ def do_recordings():
         duration = str(round(measurement['readings']['AVERAGE']['value'] \
             / measurement['duration'],measurement['readings']['AVERAGE']['decimals'])) \
             if measurement['duration'] != 0 else 0
-        print (time.strftime('%Y-%m-%d %H:%M:%S', measurement['start_ts']) + '\t' +
-              str(measurement['readings2']['PRIMARY']['value']) + '\t' +
-              measurement['readings2']['PRIMARY']['unit'] + '\t' +
-              str(measurement['readings']['MAXIMUM']['value']) + '\t' +
-              measurement['readings']['MAXIMUM']['unit'] + '\t' +
-              duration + '\t' +
-              measurement['readings']['AVERAGE']['unit'] + '\t' +
-              str(measurement['readings']['MINIMUM']['value']) + '\t' +
-              measurement['readings']['MINIMUM']['unit'] + '\t' +
-              str(measurement['duration']) + '\t',end=' ')
+        print (time.strftime('%d-%m-%d %H:%M:%S', measurement['start_ts']), \
+              str(measurement['readings2']['PRIMARY']['value']), \
+              measurement['readings2']['PRIMARY']['unit'], \
+              str(measurement['readings']['MAXIMUM']['value']), \
+              measurement['readings']['MAXIMUM']['unit'], \
+              duration, \
+              measurement['readings']['AVERAGE']['unit'], \
+              str(measurement['readings']['MINIMUM']['value']), \
+              measurement['readings']['MINIMUM']['unit'], \
+              str(measurement['duration']),sep=sep,end=sep)
         print ('INTERVAL' if measurement['record_type'] == 'INTERVAL' else measurement['stable'])
       print
       found = True
