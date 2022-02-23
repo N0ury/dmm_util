@@ -461,7 +461,7 @@ def do_recordings():
         duration = str(round(measurement['readings']['AVERAGE']['value'] \
             / measurement['duration'],measurement['readings']['AVERAGE']['decimals'])) \
             if measurement['duration'] != 0 else 0
-        print (time.strftime('%d-%m-%d %H:%M:%S', measurement['start_ts']), \
+        print (time.strftime('%Y-%m-%d %H:%M:%S', measurement['start_ts']), \
               str(measurement['readings2']['PRIMARY']['value']), \
               measurement['readings2']['PRIMARY']['unit'], \
               str(measurement['readings']['MAXIMUM']['value']), \
