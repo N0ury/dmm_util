@@ -419,7 +419,7 @@ def do_recordings():
   nb_recordings = int(qsls()['nb_recordings'])
   if argc == 4:
     if sys.argv[3] == 'list':
-      print ('Index','Name','Start','End','Duration','Samples',sep=sep)
+      print ('Index','Name','Start','End','Duration','Measurements',sep=sep)
       for i in range (1,nb_recordings + 1):
         recording = qrsi(str(i-1))
         seconds = time.mktime(recording['end_ts']) - time.mktime(recording['start_ts'])
