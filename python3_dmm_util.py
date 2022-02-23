@@ -446,8 +446,14 @@ def do_recordings():
     if i.isdigit():
       recording = qrsi(str(int(i)-1))
       # print ('recording',recording)
-      print ("%s (detail) [%s - %s] : %d measurements" % ((recording['name']).decode(),time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts']),recording['num_samples']))
-      print ('Time','Primary','','Maximum','','Average','','Minimum','','#samples','Type',sep=sep)
+      seconds = time.mktime(recording['end_ts']) - time.mktime(recording['start_ts'])
+      m, s = divmod(int(seconds), 60)
+      h, m = divmod(m, 60)
+      d, h = divmod(h, 24)
+      duration = f'{d:02d}:{h:02d}:{m:02d}:{s:02d}'
+      print ('Index %s, name %s, start %s, end %s, duration %s, measurements %s' \
+            % (str(i), (recording['name']).decode(),time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts']), duration, recording['num_samples']))
+      print ('Start Time','Primary','','Maximum','','Average','','Minimum','','#samples','Description',sep=sep)
 
       for k in range(0,recording['num_samples']):
         measurement = qsrr(str(recording['reading_index']), str(k))
