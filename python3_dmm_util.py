@@ -10,14 +10,17 @@ import datetime
 from calendar import timegm
 
 def usage():
-  print ("Usage: dmm_util <usb port> info                                                        : Display info about the meter")
-  print ("       dmm_util <usb port> recordings [{list | <index value...> | name <value...>}]    : Display one,some or all recordings")
-  print ("       dmm_util <usb port> saved_measurements [{<index value...> | name <value...>}]   : Display one,some or all saved measurements")
-  print ("       dmm_util <usb port> saved_min_max [{list | <index value...> | name <value...>}] : Display one,some or all saved min max measurements")
-  print ("       dmm_util <usb port> saved_peak [{list | <index value...> | name <value...>}]    : Display one,some or all saved peak measurements")
-  print ("       dmm_util <usb port> measure_now                                                 : Display the current meter value" )
-  print ("       dmm_util <usb port> set {company | contact | operator | site} <value>           : Set meter contact info")
-  print ("       dmm_util <usb port> sync_time                                                   : Sync the clock on the DMM to the computer clock")
+  print ("Usage: dmm_util -p|--port <usb port> command")
+  print ("       command:")
+  print ("         info                                                        : Display info about the meter")
+  print ("         recordings [{list | <index value...> | <name value...>}]    : Display one,some or all recordings")
+  print ("         saved_min_max [{list | <index value...> | <name value...>}] : Display one,some or all saved min max measurements")
+  print ("         saved_peak [{list | <index value...> | name <value...>}]    : Display one,some or all saved peak measurements")
+  print ("         saved_measurements [{<index value...> | <name value...>}]   : Display one,some or all saved measurements")
+  print ("         measure_now                                                 : Display the current meter value" )
+  print ("         set {company | contact | operator | site} <value>           : Set meter contact info")
+  print ("         setname [{<index value> <name value>}]                      : Set meter recording names")
+  print ("         sync_time                                                   : Sync the clock on the DMM to the computer clock")
   print ("")
   print ("If index is used, it starts at 1")
   print ("")
@@ -74,21 +77,31 @@ def qddb():
     'readings' : parse_readings(bytes[34:])
   }
 
-def do_set():
-  property = sys.argv[3]
-  value = sys.argv[4]
-  if argc != 5:
-    usage()
-    sys.exit()
+def do_set(parameter):
+  property = parameter[0]
+  value = parameter[1]
   if property not in ["company", "site", "operator", "contact"]:
     usage()
     sys.exit()
   cmd = 'mpq ' + property + ",'" + value + "'\r"
-  ser.write(cmd.encode())
-  time.sleep (0.1)
-  res=ser.read(2)
-  if res[0] == '0': print ("Sucsessfully set",property, "value")
+  res = meter_command(cmd)
+  print ("Sucsessfully set",property, "value")
 
+def do_setname(name):
+  sep = '\t'
+  match len(name):
+    case 0:
+      for i in range (1,9):
+        cmd = 'qsavname ' + str(i-1) + '\r'
+        res = meter_command(cmd)
+        print (i,res[0].split('\r')[0],sep=sep)
+    case 1:
+      cmd = 'qsavname ' + str(int(name[0])-1) + '\r'
+      res = meter_command(cmd)
+      print (res[0].split('\r')[0])
+    case 2:
+      cmd = 'savname ' + str(int(name[0])-1) + ',"' + name[1] + '"\r'
+      res = meter_command(cmd)
 
 def do_info():
   info = id()
@@ -225,8 +238,10 @@ def parse_time(t):
 
 def qrsi(idx):
   res = meter_command('qrsi '+idx)
+#  import binascii
+#  print('res',binascii.hexlify(res))
   reading_count = get_u16(res, 76)
-  # print ('res', res,"reading_count",reading_count)
+#  print ("reading_count",reading_count)
   if len(res) < reading_count * 30 + 78:
     raise ValueError('By app: qrsi parse error, expected at least %d bytes, got %d' % (reading_count * 30 + 78, len(res)))
   return {
@@ -313,17 +328,17 @@ def do_min_max_cmd(cmd, idx):
     'name' : res[(54 + reading_count * 30):]
     }
 
-def do_saved_peak():
-  do_saved_min_max_peak('nb_peak', 'qpsi')
+def do_saved_peak(records):
+  do_saved_min_max_peak(records, 'nb_peak', 'qpsi')
 
-def do_saved_min_max():
-  do_saved_min_max_peak('nb_min_max', 'qmmsi')
+def do_saved_min_max(records):
+  do_saved_min_max_peak(records, 'nb_min_max', 'qmmsi')
 
-def do_saved_min_max_peak(field, cmd):
+def do_saved_min_max_peak(records, field, cmd):
   sep = '\t'
   nb_min_max = int(qsls()[field])
-  if argc == 4:
-    if sys.argv[3] == 'list':
+  if len(records) != 0:
+    if records[0] == 'list':
       print ('#','start time','duration','name',sep=sep)
       for i in range (1,nb_min_max+1):
         measurement = do_min_max_cmd(cmd,str(i-1))
@@ -340,10 +355,10 @@ def do_saved_min_max_peak(field, cmd):
   for i in range(1,nb_min_max+1):
     interval.append(str(i))
   found = False
-  if argc == 3:
+  if len(records) == 0:
     series = interval
   else:
-    series = sys.argv[3:]
+    series = records
 
   for i in series:
     if i.isdigit():
@@ -352,7 +367,7 @@ def do_saved_min_max_peak(field, cmd):
       found = True
     else:
       for j in interval:
-        measurement = do_min_max_cmd(cmd,str(j-1))
+        measurement = do_min_max_cmd(cmd,str(int(j)-1))
         if measurement['name'] == i.encode():
           found = True
           print_min_max_peak(measurement)
@@ -375,20 +390,20 @@ def print_min_max_peak_detail(measurement, detail):
         measurement['readings'][detail]['unit'], \
         time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings'][detail]['ts']))
 
-def do_saved_measurements():
+def do_saved_measurements(records):
   nb_measurements = int(qsls()['nb_measurements'])
-  if argc == 4:
-    if sys.argv[3] == 'list':
+  if len(records) != 0:
+    if records[0] == 'list':
       print ('list: invalid option')
       sys.exit()
   interval = []
-  for i in range(1,nb_measurements+1):
+  for i in range(1,nb_measurements + 1):
     interval.append(str(i))
   found = False
-  if argc == 3:
+  if len(records) == 0:
     series = interval
   else:
-    series = sys.argv[3:]
+    series = records
 
   for i in series:
     if i.isdigit():
@@ -404,7 +419,7 @@ def do_saved_measurements():
         measurement = qsmr(str(int(j)-1))
         if measurement['name'] == i.encode():
           found = True
-          print (measurement['name'], \
+          print ((measurement['name']).decode('utf-8'), \
               time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings']['PRIMARY']['ts']), \
               ":", \
               measurement['readings']['PRIMARY']['value'], \
@@ -414,14 +429,15 @@ def do_saved_measurements():
     print ("Saved names not found")
     sys.exit()
 
-def do_recordings():
+def do_recordings(records):
   sep = '\t'
   nb_recordings = int(qsls()['nb_recordings'])
-  if argc == 4:
-    if sys.argv[3] == 'list':
+  if len(records) != 0:
+    if records[0] == 'list':
       print ('Index','Name','Start','End','Duration','Measurements',sep=sep)
       for i in range (1,nb_recordings + 1):
         recording = qrsi(str(i-1))
+        #print ('recording',recording)
         seconds = time.mktime(recording['end_ts']) - time.mktime(recording['start_ts'])
         m, s = divmod(int(seconds), 60)
         h, m = divmod(m, 60)
@@ -437,16 +453,16 @@ def do_recordings():
   for i in range(1,nb_recordings + 1):
     interval.append(str(i))
   found = False
-  if argc == 3:
+  if len(records) == 0:
     series = interval
   else:
-    series = sys.argv[3:]
+    series = records
 
   sep = '\t'
   for i in series:
     if i.isdigit():
       recording = qrsi(str(int(i)-1))
-      # print ('recording',recording)
+      #print ('recording digit',recording)
       seconds = time.mktime(recording['end_ts']) - time.mktime(recording['start_ts'])
       m, s = divmod(int(seconds), 60)
       h, m = divmod(m, 60)
@@ -477,11 +493,13 @@ def do_recordings():
       found = True
     else:
       for j in interval:
-        recording = qrsi(str(j-1))
-#        print ('recording',recording)
+        recording = qrsi(str(int(j)-1))
+        #print ('recording non digit',recording)
         if recording['name'] == i.encode():
           found = True
-          print ("%s (detail) [%s - %s] : %d measurements" % (recording['name'],time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts']),recording['num_samples']))
+          print ('Index %s, Name %s, Start %s, End %s, Duration %s, Measurements %s' \
+            % (str(j), (recording['name']).decode(),time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts']), duration, recording['num_samples']))
+          print ('Start Time','Primary','','Maximum','','Average','','Minimum','','#Samples','Type',sep=sep)
           for k in range(0,recording['num_samples']):
             measurement = qsrr(str(recording['reading_index']), str(k))
 #            print ('measurement',measurement)
@@ -498,7 +516,7 @@ def do_recordings():
                   measurement['readings']['AVERAGE']['unit'], \
                   str(measurement['readings']['MINIMUM']['value']), \
                   measurement['readings']['MINIMUM']['unit'], \
-                  str(measurement['duration']),end=' ')
+                  str(measurement['duration']),sep=sep,end=sep)
             print ('INTERVAL' if measurement['record_type'] == 'INTERVAL' else measurement['stable'])
           print
           break
@@ -515,7 +533,8 @@ def data_is_ok(data):
 
   # Non-OK status with extra data on end
   if len(data) > 2 and chr(data[0]) != '0':
-    raise ValueError('By app: Error parsing status from DMM (Non-OK status with extra data on end)')
+    print ('Error parsing status from DMM (Non-OK status with extra data on end)')
+    sys.exit()
 
   # We should now be in OK state
   if not data.startswith(b"0\r"):
@@ -562,27 +581,53 @@ def meter_command(cmd):
     data = [i for i in data[2:-1].decode().split(',')]
     return data
 
-
-argc = len(sys.argv)
-if argc <= 2:
-   usage();
-   exit
-
-switch={'recordings':do_recordings,'saved_measurements':do_saved_measurements,'saved_min_max':do_saved_min_max,'saved_peak':do_saved_peak,'info':do_info,'sync_time':do_sync_time,'set':do_set,'measure_now':do_measure_now}
-
-#serial port settings
-try:
-  ser = serial.Serial(port=sys.argv[1], baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=0.01, rtscts=False, dsrdtr=False)
-except serial.serialutil.SerialException as err:
-  print ('Serial Port ' + sys.argv[1] + ' does not respond')
-  print (err)
-  sys.exit()
-
-map_cache = {}
-
-if sys.argv[2] in switch:
-  switch[sys.argv[2]]()
-else:
-  usage()
-  sys.exit()
-
+if __name__ == '__main__':
+  argc = len(sys.argv)
+  if argc <= 2:
+     usage();
+     exit
+  
+  import argparse
+  
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-p", "--port", help="usb port used")
+  parser.add_argument("command", nargs="*", help="command used")
+  args = parser.parse_args()
+  
+  #serial port settings
+  try:
+    ser = serial.Serial(port=args.port, \
+          baudrate=115200, bytesize=8, parity='N', stopbits=1, \
+          timeout=0.01, rtscts=False, dsrdtr=False)
+  except serial.serialutil.SerialException as err:
+    print ('Serial Port ' + args.port + ' does not respond')
+    print (err)
+    sys.exit()
+  
+  map_cache = {}
+  
+  match args.command[0]:
+    case "recordings":
+      do_recordings(args.command[1:])
+    case "saved_measurements":
+      do_saved_measurements(args.command[1:])
+    case "saved_min_max":
+      do_saved_min_max(args.command[1:])
+    case "saved_peak":
+      do_saved_peak(args.command[1:])
+    case "info":
+      do_info()
+    case "sync_time":
+      do_sync_time()
+    case "set":
+      if len(args.command[1:]) != 2:
+        usage()
+      do_set(args.command[1:])
+    case "setname":
+      if len(args.command[1:]) not in [0,1,2]:
+        usage()
+      do_setname(args.command[1:])
+    case "measure_now":
+      do_measure_now()
+    case _:
+      usage()
