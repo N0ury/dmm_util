@@ -8,6 +8,7 @@ You can:
 - set date and time
 - set internal data such as company,contact,operator,or site
 - display realtime measurements
+- set available record names list
 
 This is a complete rewrite of [Fredrik Valeur dmm_util](https://github.com/fvaleur/dmm_util)  
 Previous one was written in Ruby. This one is written in Python 3.  
@@ -15,7 +16,7 @@ There are also some changes to the code.
 
 **Prerequisites:**
 
-Python 3 and pyserial must have been installed before use.
+Python 3.10+ and pyserial must have been installed before use.
 
 many things have been added as we go along. So the code is not optimal.
 
