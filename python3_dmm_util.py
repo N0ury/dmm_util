@@ -8,9 +8,10 @@ import struct
 import sys
 import datetime
 from calendar import timegm
+import argparse
 
 def usage():
-  print ("Usage: dmm_util -p|--port <usb port> command")
+  print ("Usage: dmm_util -p|--port <usb port> command [-s SEPARATOR]")
   print ("       command:")
   print ("         info                                                        : Display info about the meter")
   print ("         recordings [{list | <index value...> | <name value...>}]    : Display one,some or all recordings")
@@ -23,12 +24,13 @@ def usage():
   print ("         sync_time                                                   : Sync the clock on the DMM to the computer clock")
   print ("")
   print ("If index is used, it starts at 1")
+  print ("SEPARATOR defaults to tab '\\t'")
   print ("")
   print ("Example:")
   print ("python python3_dmm_util.py -p COM1 recordings")
-  print ("python python3_dmm_util.py -p /dev/ttyUSB0 recordings 'Save 1' 'Save 2'")
+  print ("python python3_dmm_util.py -s ',' -p /dev/ttyUSB0 recordings 'Save 1' 'Save 2'")
   print ("python python3_dmm_util.py recordings 1 2 3 -p COM3")
-  print ("python python3_dmm_util.py recordings list --port /dev/ttyUSB1")
+  print ("python python3_dmm_util.py recordings list --port /dev/ttyUSB1 -s ';'")
   print ("")
   sys.exit()
 
@@ -88,7 +90,6 @@ def do_set(parameter):
   print ("Sucsessfully set",property, "value")
 
 def do_setname(name):
-  sep = '\t'
   match len(name):
     case 0:
       for i in range (1,9):
@@ -335,7 +336,6 @@ def do_saved_min_max(records):
   do_saved_min_max_peak(records, 'nb_min_max', 'qmmsi')
 
 def do_saved_min_max_peak(records, field, cmd):
-  sep = '\t'
   nb_min_max = int(qsls()[field])
   if len(records) != 0:
     if records[0] == 'list':
@@ -430,7 +430,6 @@ def do_saved_measurements(records):
     sys.exit()
 
 def do_recordings(records):
-  sep = '\t'
   nb_recordings = int(qsls()['nb_recordings'])
   if len(records) != 0:
     if records[0] == 'list':
@@ -458,7 +457,6 @@ def do_recordings(records):
   else:
     series = records
 
-  sep = '\t'
   for i in series:
     if i.isdigit():
       recording = qrsi(str(int(i)-1))
@@ -587,13 +585,17 @@ if __name__ == '__main__':
      usage();
      exit
   
-  import argparse
+  sep = '\t'
   
   parser = argparse.ArgumentParser()
   parser.add_argument("-p", "--port", help="usb port used")
+  parser.add_argument("-s", "--separator", help="custom separator (defaults to \\t")
   parser.add_argument("command", nargs="*", help="command used")
   args = parser.parse_args()
   
+  if args.separator:
+    sep = args.separator
+
   #serial port settings
   try:
     ser = serial.Serial(port=args.port, \
