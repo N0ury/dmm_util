@@ -20,7 +20,7 @@ def usage():
   print ("         saved_measurements [{<index value...> | <name value...>}]   : Display one,some or all saved measurements")
   print ("         measure_now                                                 : Display the current meter value" )
   print ("         set {company | contact | operator | site} <value>           : Set meter contact info")
-  print ("         setname [{<index value> <name value>}]                      : Set meter recording names")
+  print ("         names [{<index value> [<name value>}]]                      : List or set meter recording names")
   print ("         sync_time                                                   : Sync the clock on the DMM to the computer clock")
   print ("")
   print ("If index is used, it starts at 1")
@@ -82,14 +82,17 @@ def qddb():
 def do_set(parameter):
   property = parameter[0]
   value = parameter[1]
-  if property not in ["company", "site", "operator", "contact"]:
-    usage()
-    sys.exit()
-  cmd = 'mpq ' + property + ",'" + value + "'\r"
+  match property:
+    case 'company' | 'site' | 'operator ' | 'contact':
+      cmd = 'mpq ' + property + ",'" + value + "'\r"
+    case 'autohold_threshold':
+      cmd = 'mp aheventTh,' + value + '\r'
+    case _:
+      usage()
   res = meter_command(cmd)
   print ("Sucsessfully set",property, "value")
 
-def do_setname(name):
+def do_names(name):
   match len(name):
     case 0:
       for i in range (1,9):
@@ -114,6 +117,16 @@ def do_info():
   print ("Contact:",meter_command("qmpq contact")[0].lstrip("'").rstrip("'"))
   print ("Operator:",meter_command("qmpq operator")[0].lstrip("'").rstrip("'"))
   print ("Site:",meter_command("qmpq site")[0].lstrip("'").rstrip("'"))
+  print ("Autohold Threshold:",meter_command("qmp aheventTh")[0].lstrip("'").rstrip("'"))
+  print ("Language:",meter_command("qmp lang")[0].lstrip("'").rstrip("'"))
+  print ("Date Format:",meter_command("qmp dateFmt")[0].lstrip("'").rstrip("'"))
+  print ("Time Format:",meter_command("qmp timeFmt")[0].lstrip("'").rstrip("'"))
+  print ("Digits:",meter_command("qmp digits")[0].lstrip("'").rstrip("'"))
+  print ("Beeper:",meter_command("qmp beeper")[0].lstrip("'").rstrip("'"))
+  print ("Temperature Offset Shift:",meter_command("qmp tempOS")[0].lstrip("'").rstrip("'"))
+  print ("Numeric Format:",meter_command("qmp numFmt")[0].lstrip("'").rstrip("'"))
+  print ("Auto Backlight Timeout:",meter_command("qmp ablto")[0].lstrip("'").rstrip("'"))
+  print ("Auto Power Off:",meter_command("qmp apoffto")[0].lstrip("'").rstrip("'"))
 
 def id():
   res = meter_command("ID")
@@ -625,10 +638,10 @@ if __name__ == '__main__':
       if len(args.command[1:]) != 2:
         usage()
       do_set(args.command[1:])
-    case "setname":
+    case "names":
       if len(args.command[1:]) not in [0,1,2]:
         usage()
-      do_setname(args.command[1:])
+      do_names(args.command[1:])
     case "measure_now":
       do_measure_now()
     case _:
