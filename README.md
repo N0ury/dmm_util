@@ -37,7 +37,7 @@ You are using Python version less than 3.10, consider upgrading.
 
 ```
 Traceback (most recent call last):
-  File "/Users/nb/work2/dmm_util/python3_dmm_util.py", line 4, in <module>
+  File "python3_dmm_util.py", line 4, in <module>
     import serial
 ModuleNotFoundError: No module named 'serial'
 ```
