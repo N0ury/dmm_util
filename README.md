@@ -25,7 +25,30 @@ many things have been added as we go along. So the code is not optimal.
 ./python3_dmm_util.py or python3 python3_dmm_util.py
 This gives help.
 
+**Common issues**
+```
+  File "python3_dmm_util.py", line nn
+    match len(name):
+            ^
+SyntaxError: invalid syntax
+```
+
+You are using Python version less than 3.10, consider upgrading.
+
+```
+Traceback (most recent call last):
+  File "/Users/nb/work2/dmm_util/python3_dmm_util.py", line 4, in <module>
+    import serial
+ModuleNotFoundError: No module named 'serial'
+```
+
+pyserial module is needed.
+Install it this way  
+`python -m pip install pyserial`
+
+
 **Copyright**
 
 Copyright © 2011 Fredrik Valeur.  
-Copyright © 2017-2019 N0ury.  
+Copyright © 2017-2021 N0ury.  
+
