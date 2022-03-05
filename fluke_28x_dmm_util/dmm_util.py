@@ -253,7 +253,7 @@ def parse_time(t):
   return time.gmtime(t)
 
 def qrsi(idx):
-  print ('IDX',idx)
+#  print ('IDX',idx)
   res = meter_command('qrsi '+idx)
 #  import binascii
 #  print('res',binascii.hexlify(res))
