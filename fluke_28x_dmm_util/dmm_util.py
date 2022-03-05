@@ -9,8 +9,10 @@ import sys
 import datetime
 from calendar import timegm
 import argparse
+import fluke_28x_dmm_util
 
 def usage():
+  print ('version:',fluke_28x_dmm_util.__version__)
   print ("Usage: dmm_util -p|--port <usb port> command [-s SEPARATOR]")
   print ("       command:")
   print ("         info                                                        : Display info about the meter")
@@ -83,7 +85,7 @@ def do_set(parameter):
   property = parameter[0]
   value = parameter[1]
   match property:
-    case 'company' | 'site' | 'operator ' | 'contact':
+    case 'company' | 'site' | 'operator' | 'contact':
       cmd = 'mpq ' + property + ",'" + value + "'\r"
     case 'autohold_threshold':
       cmd = 'mp aheventTh,' + value + '\r'
@@ -141,7 +143,7 @@ def clock():
   return res[0]
 
 def qsrr(reading_idx, sample_idx):
-#  print "in qsrr reading_idx=",reading_idx,",sample_idx",sample_idx
+#  print ("in qsrr reading_idx=",reading_idx,",sample_idx",sample_idx)
   res = meter_command("qsrr " + reading_idx + "," + sample_idx)
   #print ('res',res)
 
@@ -251,6 +253,7 @@ def parse_time(t):
   return time.gmtime(t)
 
 def qrsi(idx):
+  print ('IDX',idx)
   res = meter_command('qrsi '+idx)
 #  import binascii
 #  print('res',binascii.hexlify(res))
@@ -560,7 +563,7 @@ def read_retry():
   # First sleep is longer to permit data to be available
   time.sleep (0.03)
   while retry_count < 500 and not data_is_ok(data):
-    bytes_read = ser.read(ser.inWaiting())
+    bytes_read = ser.read(ser.in_waiting)
     data += bytes_read
     if data_is_ok(data): return data
     time.sleep (0.01)
@@ -592,7 +595,7 @@ def meter_command(cmd):
     data = [i for i in data[2:-1].decode().split(',')]
     return data
 
-if __name__ == '__main__':
+def main():
   argc = len(sys.argv)
   if argc <= 2:
      usage();

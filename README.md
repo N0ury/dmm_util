@@ -25,7 +25,37 @@ many things have been added as we go along. So the code is not optimal.
 ./python3_dmm_util.py or python3 python3_dmm_util.py
 This gives help.
 
+**Easy install from PyPi**  
+`pip install fluke-28x-dmm-util`  
+pyserial will be automatically installed as well.  
+Now you need to use it this way (for displaying help):  
+`python3 -m fluke_28x_dmm_util`  
+or  
+`python -m fluke_28x_dmm_util`  
+
+**Common issues**
+```
+  File "python3_dmm_util.py", line nn
+    match len(name):
+            ^
+SyntaxError: invalid syntax
+```
+
+You are using Python version less than 3.10, consider upgrading.
+
+```
+Traceback (most recent call last):
+  File "python3_dmm_util.py", line 4, in <module>
+    import serial
+ModuleNotFoundError: No module named 'serial'
+```
+
+pyserial module is needed.
+Install it this way  
+`python -m pip install pyserial`
+
+
 **Copyright**
 
 Copyright © 2011 Fredrik Valeur.  
-Copyright © 2017-2019 N0ury.  
+Copyright © 2017-2021 N0ury.  
