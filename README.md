@@ -25,6 +25,14 @@ many things have been added as we go along. So the code is not optimal.
 ./python3_dmm_util.py or python3 python3_dmm_util.py
 This gives help.
 
+**Easy install from PyPi**  
+`pip install fluke-28x-dmm-util`  
+pyserial will be automatically installed as well.  
+Now you need to use it this way (for displaying help):  
+`python3 -m fluke_28x_dmm_util`  
+or  
+`python -m fluke_28x_dmm_util`  
+
 **Common issues**
 ```
   File "python3_dmm_util.py", line nn
