@@ -1,4 +1,4 @@
 # __init__.py
 
 # Version of the fluke_28x_dmm_util package
-__version__ = "0.2.7"
+__version__ = "0.2.8"
