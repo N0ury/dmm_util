@@ -13,26 +13,31 @@ import fluke_28x_dmm_util
 
 def usage():
   print ('version:',fluke_28x_dmm_util.__version__)
-  print ("Usage: dmm_util -p|--port <usb port> command [-s SEPARATOR]")
-  print ("       command:")
-  print ("         info                                                        : Display info about the meter")
-  print ("         recordings [{list | <index value...> | <name value...>}]    : Display one,some or all recordings")
-  print ("         saved_min_max [{list | <index value...> | <name value...>}] : Display one,some or all saved min max measurements")
-  print ("         saved_peak [{list | <index value...> | name <value...>}]    : Display one,some or all saved peak measurements")
-  print ("         saved_measurements [{<index value...> | <name value...>}]   : Display one,some or all saved measurements")
-  print ("         measure_now                                                 : Display the current meter value" )
-  print ("         set {company | contact | operator | site} <value>           : Set meter contact info")
-  print ("         names [{<index value> [<name value>}]]                      : List or set meter recording names")
-  print ("         sync_time                                                   : Sync the clock on the DMM to the computer clock")
+  print ("Usage: python dmm_util.py [OPTIONS] command")
+  print ("Options:")
+  print ("  -p|--port <usb port> Port name (ex: COM3). Defaults to /dev/ttyUSB0")
+  print ("  -s separator         Separator for lists and recorded values. Defaults to tab '\\t'")
+  print ("  -t timeout           Read timeout. Defaults to 0.09. Be careful changing this value")
+  print ("                       the effect on total time is important")
+  print ("")
+  print ("Command:")
+  print ("  info                                                        : Display info about the meter")
+  print ("  recordings [{list | <index value...> | <name value...>}]    : Display one,some or all recordings")
+  print ("  saved_min_max [{list | <index value...> | <name value...>}] : Display one,some or all saved min max measurements")
+  print ("  saved_peak [{list | <index value...> | name <value...>}]    : Display one,some or all saved peak measurements")
+  print ("  saved_measurements [{<index value...> | <name value...>}]   : Display one,some or all saved measurements")
+  print ("  measure_now                                                 : Display the current meter value" )
+  print ("  set {company | contact | operator | site} <value>           : Set meter contact info")
+  print ("  names [{<index value> [<name value>}]]                      : List or set meter recording names")
+  print ("  sync_time                                                   : Sync the clock on the DMM to the computer clock")
   print ("")
   print ("If index is used, it starts at 1")
-  print ("SEPARATOR defaults to tab '\\t'")
   print ("")
   print ("Example:")
-  print ("python python3_dmm_util.py -p COM1 recordings")
-  print ("python python3_dmm_util.py -s ',' -p /dev/ttyUSB0 recordings 'Save 1' 'Save 2'")
-  print ("python python3_dmm_util.py recordings 1 2 3 -p COM3")
-  print ("python python3_dmm_util.py recordings list --port /dev/ttyUSB1 -s ';'")
+  print ("python dmm_util.py -p COM1 recordings")
+  print ("python dmm_util.py -s ',' -p /dev/ttyUSB0 recordings 'Save 1' 'Save 2'")
+  print ("python dmm_util.py recordings 1 2 3 -p COM3")
+  print ("python dmm_util.py recordings list --port /dev/ttyUSB1 -s ';'")
   print ("")
   sys.exit()
 
@@ -143,24 +148,28 @@ def clock():
   return res[0]
 
 def qsrr(reading_idx, sample_idx):
-#  print ("in qsrr reading_idx=",reading_idx,",sample_idx",sample_idx)
-  res = meter_command("qsrr " + reading_idx + "," + sample_idx)
-  #print ('res',res)
+  retry_count = 0
+  while retry_count < 20:
+#    print ("in qsrr reading_idx=",reading_idx,",sample_idx",sample_idx)
+    res = meter_command("qsrr " + reading_idx + "," + sample_idx)
+    #print ('res',res)
+    if len(res) == 146:
+      return {
+        'start_ts' :  parse_time(get_double(res, 0)),
+        'end_ts' :  parse_time(get_double(res, 8)),
+        'readings' : parse_readings(res[16:16 + 30*3]),
+        'duration' : round(get_u16(res, 106),5),
+        'un2' : get_u16(res, 108),
+        'readings2' : parse_readings(res[110:110 +30]),
+        'record_type' :  get_map_value('recordtype', res, 140),
+        'stable'   : get_map_value('isstableflag', res, 142),
+        'transient_state' : get_map_value('transientstate', res, 144)
+      }
+    else:
+#      print ('============== RETRY ===============')
+      retry_count += 1
 
-  if len(res) != 146:
-    raise ValueError('By app: Invalid block size: %d should be 146' % (len(res)))
-  # All bytes parsed - except there seems to be single byte at end?
-  return {
-    'start_ts' :  parse_time(get_double(res, 0)),
-    'end_ts' :  parse_time(get_double(res, 8)),
-    'readings' : parse_readings(res[16:16 + 30*3]),
-    'duration' : round(get_u16(res, 106),5),
-    'un2' : get_u16(res, 108),
-    'readings2' : parse_readings(res[110:110 +30]),
-    'record_type' :  get_map_value('recordtype', res, 140),
-    'stable'   : get_map_value('isstableflag', res, 142),
-    'transient_state' : get_map_value('transientstate', res, 144)
-  }
+  raise ValueError('By app: Invalid block size: %d should be 146' % (len(res)))
 
 def parse_readings(reading_bytes):
   #print ("in parse_readings,reading_bytes=",reading_bytes,"lgr:",len(reading_bytes))
@@ -404,7 +413,7 @@ def print_min_max_peak_detail(measurement, detail):
   print ('\t',detail, \
         measurement['readings'][detail]['value'], \
         measurement['readings'][detail]['unit'], \
-        time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings'][detail]['ts']))
+        time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings'][detail]['ts']),sep=sep)
 
 def do_saved_measurements(records):
   nb_measurements = int(qsls()['nb_measurements'])
@@ -426,9 +435,8 @@ def do_saved_measurements(records):
       measurement = qsmr(str(int(i)-1))
       print ((measurement['name']).decode('utf-8'), \
           time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings']['PRIMARY']['ts']), \
-          ":", \
           measurement['readings']['PRIMARY']['value'], \
-          measurement['readings']['PRIMARY']['unit'])
+          measurement['readings']['PRIMARY']['unit'],sep=sep)
       found = True
     else:
       for j in interval:
@@ -439,7 +447,7 @@ def do_saved_measurements(records):
               time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings']['PRIMARY']['ts']), \
               ":", \
               measurement['readings']['PRIMARY']['value'], \
-              measurement['readings']['PRIMARY']['unit'])
+              measurement['readings']['PRIMARY']['unit'],sep=sep)
           break
   if not found:
     print ("Saved names not found")
@@ -546,47 +554,61 @@ def data_is_ok(data):
   if len(data) == 2 and chr(data[0]) != '0' and chr(data[1]) == "\r": return True
 
   # Non-OK status with extra data on end
-  if len(data) > 2 and chr(data[0]) != '0':
-    print ('Error parsing status from DMM (Non-OK status with extra data on end)')
-    sys.exit()
+  if len(data) > 2 and chr(data[0]) != '0': return False
 
   # We should now be in OK state
-  if not data.startswith(b"0\r"):
-    raise ValueError('By app: Error parsing status from DMM (status:%c size:%d)' % (data[0], len(data)))
+  if not data.startswith(b"0\r"): return False
 
   return len(data) >= 4 and chr(data[-1]) == '\r'
 
-def read_retry():
-  retry_count = 0
+def read_retry(cmd):
+  retry_cmd_count = 0
+  retry_read_count = 0
   data = b''
 
-  # First sleep is longer to permit data to be available
-  time.sleep (0.03)
-  while retry_count < 500 and not data_is_ok(data):
-    bytes_read = ser.read(ser.in_waiting)
-    data += bytes_read
-    if data_is_ok(data): return data
-    time.sleep (0.01)
-    retry_count += 1
-  if len(data) > 1:
-    raise ValueError('By app: Error parsing status from DMM:  %c %d %r %r' % (chr(data[0]),len(data),chr(data[1]) == '\r', chr(data[-1]) == '\r'))
-  else:
-    print ("No communication with the DMM. Exiting...")
-    sys.exit()
+  while retry_cmd_count < 20 and not data_is_ok(data):
+    ser.write(cmd.encode()+b'\r')
+    # First sleep is longer to permit data to be available
+    # Don't remove it, it's very useful
+#    time.sleep (0.03)
+    while retry_read_count < 20 and not data_is_ok(data):
+      bytes_read = ser.read(ser.in_waiting)
+      data += bytes_read
+      if data_is_ok(data): return data,True
+      time.sleep (0.01)
+      retry_read_count += 1
+    retry_cmd_count += 1
+#    print ("========== read_retry ===========")
+    ser.reset_input_buffer()
+    ser.reset_output_buffer()
+    ser.close()
+    ser.open()
+    time.sleep (0.1)
+
+    return data, False
 
 def meter_command(cmd):
 #  print ("cmd=",cmd)
-  ser.write(cmd.encode()+b'\r')
-  data = read_retry()
-  if data == b'':
-    raise ValueError('By app: Did not receive data from DMM')
-  status = chr(data[0])
+  retry_count = 0
+  while retry_count < 20:
+    data,result_ok = read_retry(cmd)
+    if data == b'':
+      print ('Did not receive data from DMM')
+      sys.exit(1)
+    status = chr(data[0])
+    if status == '0' and chr(data[1]) == '\r': break
+    if result_ok: break
+    retry_count += 1
+#    print ("========== meter_command ===========")
+
   if status != '0':
 #    print ("Command: %s failed. Status=%c" % (cmd, status))
     print ("Invalid value")
     sys.exit()
   if chr(data[1]) != '\r':
-    raise ValueError('By app: Did not receive complete reply from DMM')
+    print ('Did not receive complete reply from DMM')
+    sys.exit(1)
+
   binary = data[2:4] == b'#0'
 
   if binary:
@@ -601,29 +623,41 @@ def main():
      usage();
      exit
   
+  global sep
+  global ser
+  global map_cache
+  global timeout
   sep = '\t'
+  ser = None
+  timeout = 0.09
+  map_cache = {}
   
   parser = argparse.ArgumentParser()
   parser.add_argument("-p", "--port", help="usb port used")
   parser.add_argument("-s", "--separator", help="custom separator (defaults to \\t")
+  parser.add_argument("-t", "--timeout", help="custom timeout (defaults to 0.09")
   parser.add_argument("command", nargs="*", help="command used")
   args = parser.parse_args()
   
   if args.separator:
     sep = args.separator
 
+  if args.timeout:
+    timeout = float(args.timeout)
+
   #serial port settings
   try:
     ser = serial.Serial(port=args.port, \
           baudrate=115200, bytesize=8, parity='N', stopbits=1, \
-          timeout=0.01, rtscts=False, dsrdtr=False)
+          timeout=timeout, rtscts=False, dsrdtr=False)
   except serial.serialutil.SerialException as err:
     print ('Serial Port ' + args.port + ' does not respond')
     print (err)
     sys.exit()
   
-  map_cache = {}
-  
+  if len(args.command) == 0:
+    usage()
+
   match args.command[0]:
     case "recordings":
       do_recordings(args.command[1:])
