@@ -21,6 +21,11 @@ There are also some changes to the code.
 
 many things have been added as we go along. So the code is not optimal.
 
+**Important**  
+All the data displayed are those returned by the multimeter.  
+None is calculated or processed
+
+
 **How to install it:**
 
 1. - Using PyPi (the simplest way)  
@@ -49,6 +54,11 @@ Latest **commit** can be used by typing:
 >And then use with:  
 >`python -m fluke_28x_dmm_util -p port...`
 
+3. -  From Github releasehttps://github.com/N0ury/dmm_util/releases  
+Get the latest release and unzip (or gunzip) it  
+cd to the folder that has been created and run the utility as shown above.
+
+
 **Common issues**
 ```
   File "python3_dmm_util.py", line nn
@@ -74,5 +84,7 @@ Install it this way
 **Copyright**
 
 Copyright © 2011 Fredrik Valeur.  
-Copyright © 2017-2021 N0ury.  
+Copyright © 2017-2022 N0ury.
+
+
 

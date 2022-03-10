@@ -10,6 +10,7 @@ import datetime
 from calendar import timegm
 import argparse
 import fluke_28x_dmm_util
+import binascii
 
 def usage():
   print ('version:',fluke_28x_dmm_util.__version__)
@@ -152,7 +153,7 @@ def qsrr(reading_idx, sample_idx):
   while retry_count < 20:
 #    print ("in qsrr reading_idx=",reading_idx,",sample_idx",sample_idx)
     res = meter_command("qsrr " + reading_idx + "," + sample_idx)
-    #print ('res',res)
+#    print('qsrr',binascii.hexlify(res))
     if len(res) == 146:
       return {
         'start_ts' :  parse_time(get_double(res, 0)),
@@ -187,6 +188,7 @@ def parse_readings(reading_bytes):
                            'attribute' : get_map_value('attribute', r, 20),
                            'ts' : get_time(r, 22)
     }
+#  print ('------',readings)
   return readings
 
 def get_map_value(map_name, string, offset):
@@ -253,7 +255,7 @@ def get_double(string, offset):
   endian_l = string[offset+3:offset-1:-1] if offset > 0 else string[offset+3::-1]
   endian_h = string[offset+7:offset+3:-1]
   endian = endian_l + endian_h
-  return round(struct.unpack('!d', endian)[0],5)
+  return round(struct.unpack('!d', endian)[0],8)
 
 def get_time(string, offset):
   return parse_time(get_double(string, offset))
@@ -264,7 +266,6 @@ def parse_time(t):
 def qrsi(idx):
 #  print ('IDX',idx)
   res = meter_command('qrsi '+idx)
-#  import binascii
 #  print('res',binascii.hexlify(res))
   reading_count = get_u16(res, 76)
 #  print ("reading_count",reading_count)
