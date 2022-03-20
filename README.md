@@ -31,11 +31,15 @@ None is calculated or processed
 1. - Using PyPi (the simplest way)  
 Latest **release** can be installed by typing:  
 `python -m pip install fluke_28x_dmm_util`  
+[![PyPI version](https://badge.fury.io/py/fluke-28x-dmm-util.svg)](https://badge.fury.io/py/fluke-28x-dmm-util)  
+[![Downloads](https://pepy.tech/badge/fluke-28x-dmm-util)](https://pepy.tech/project/fluke-28x-dmm-util)
 
 
 2. - From github (newest version):  
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/N0ury/dmm_util)  
 Latest **commit** can be used by typing:  
-`git clone https://github.com/N0ury/dmm_util.git`
+`git clone https://github.com/N0ury/dmm_util.git`  
+
 
 
 3. -  From Github releasehttps://github.com/N0ury/dmm_util/releases  
