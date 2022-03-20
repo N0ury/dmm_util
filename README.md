@@ -36,13 +36,13 @@ Latest **release** can be installed by typing:
 
 
 2. - From github (newest version):  
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/N0ury/dmm_util)  
 Latest **commit** can be used by typing:  
 `git clone https://github.com/N0ury/dmm_util.git`  
 
 
 
-3. -  From Github releasehttps://github.com/N0ury/dmm_util/releases  
+3. -  From Github [release](https://github.com/N0ury/dmm_util/releases)  
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/N0ury/dmm_util)  
 Get the latest release and unzip (or gunzip) it  
 cd to the folder that has been created and run the utility as shown above.
 
