@@ -78,7 +78,12 @@ get saved_measurements {name|index}[,{name|index}...]
 name is the name used for a recording,index is the number  
 These informations can be displayed with `list` command  
 name can be surrounded by quotes in case it contains spaces  
-If this parameter contains only digits, it is assumed to be an index. Otherwise it will be taken as a name  
+If this parameter contains only digits, it is assumed to be an index. Otherwise it will be taken as a name. Multiple names or indexes are permitted, they must be comma separated.
+
+Example:  
+get recordings 1,"Record 2",5  
+get recordings 3  
+
 This command displays detailed recordings informations
 - set:  
 set company value: set DMM company value  
@@ -87,7 +92,12 @@ set site value: set DMM site value
 set contact value: set DMM contact value  
 set datetime: set DMM date and time to those of the PC  
 set names index name: set the name of index recording name  
-index is a value between 1 and 8. List can be obtained using `show names`
+index is a value between 1 and 8. List can be obtained using `show names`  
+
+Example:  
+set operator N0ury  
+set name 2 Min_Max  
+
 - show  
 show names : display available names for recordings  
 show info : display DMM configuration
