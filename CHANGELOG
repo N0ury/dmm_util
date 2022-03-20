@@ -1,0 +1,34 @@
+# Changelog
+All notable changes to this project will be documented in this file.
+This Changelog starts with version v0.3.0
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.3.0] - 2022-03-20
+### Added
+- This CHANGELOG file
+- New function "duration" for converting seconds to "d:hh:mm:ss" format.
+- New function "do_list" to list saved recordings
+- New function "do_show" for displaying configuration informations
+
+### Changed
+- Main change is the command syntax
+- Help (usage function) is modified accordingly
+- Serial port is started in function. Syntax analysis can occur without DMM.
+- ser variable for serial connection is now global variable
+- port variable for serial connection is now global variable
+- This function is called from main processing functions
+- Function do_measure_now is renamed to do_display.
+- Complete rework of do_set function for adding set datetime, and for new command syntax
+- Use of start_ts and end_ts everywhere. ts1 and ts2 are not used anymore
+- "list" format is normalized. Nearly same for all types of recordings
+- Sleep time before retry is now 0.01. It was 0.1 before.
+
+### Removed
+- "do_names" function has been removed
+- "do_info" function has been removed
+- Old "list" code has been removed as we have now a "do_list" function
+
+### Fixed
+- Return status in data_is_ok was wrong for 2 bytes data

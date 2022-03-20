@@ -42,6 +42,18 @@ def usage():
   print ("")
   sys.exit()
 
+def start_serial(port):
+  global ser
+  #serial port settings
+  try:
+    ser = serial.Serial(port=port, \
+          baudrate=115200, bytesize=8, parity='N', stopbits=1, \
+          timeout=timeout, rtscts=False, dsrdtr=False)
+  except serial.serialutil.SerialException as err:
+    print ('Serial Port ' + port + ' does not respond')
+    print (err)
+    sys.exit()
+  
 def do_sync_time():
   lt = timegm(datetime.datetime.now().utctimetuple())
   cmd = 'mp clock,' + str(lt)
@@ -50,7 +62,8 @@ def do_sync_time():
   res=ser.read(2)
   if res == b'0\r': print ("Sucsessfully synced the clock of the DMM")
   
-def do_measure_now():
+def do_display():
+  start_serial(port)
   while True:
     try:
       res = qddb()
@@ -62,6 +75,58 @@ def do_measure_now():
             res['prim_function'])
     except KeyboardInterrupt:
       sys.exit()
+
+def duration(start_time, end_time):
+  seconds = time.mktime(end_time) - time.mktime(start_time)
+  m, s = divmod(int(seconds), 60)
+  h, m = divmod(m, 60)
+  d, h = divmod(h, 24)
+  return d,h,m,s
+
+def do_list(type):
+  start_serial(port)
+  nb = qsls()
+  nbr  = int(nb['nb_recordings'])
+  nbmm = int(nb['nb_min_max'])
+  nbp  = int(nb['nb_peak'])
+
+  items = {}
+  if type == 'recordings': items[type] = {'cmd':'qrsi','nb':nbr,'lib':'Recording'}
+  elif type == 'minmax': items[type] = {'cmd':'qmmsi','nb':nbmm,'lib':'MinMax'}
+  elif type == 'peak': items[type] = {'cmd':'qpsi','nb':nbp,'lib':'Peak'}
+  else: items = { 'minmax':{'cmd':'qmmsi','nb':nbmm,'lib':'MinMax'},
+           'peak':{'cmd':'qpsi','nb':nbp,'lib':'Peak'},
+           'recordings':{'cmd':'qrsi','nb':nbr,'lib':'Recording'}}
+
+  for item in items:
+    cmd = items[item]['cmd']
+    nb = items[item]['nb']
+    lib = items[item]['lib']
+    if item in ['minmax','peak']:
+      print ('Index','Name','Type','Start','End','Duration',sep=sep)
+      for i in range (1,nb+1):
+        mm = do_min_max_cmd(cmd, str(i-1))
+        d,h,m,s = duration(mm['start_ts'], mm['end_ts'])
+        name = mm['name'].decode()
+        debut_d = time.strftime('%Y-%m-%d %H:%M:%S',mm['start_ts'])
+        fin_d = time.strftime('%Y-%m-%d %H:%M:%S',mm['end_ts'])
+        print(f'{i:d}',name,lib,debut_d,fin_d,
+              f'{d:02d}:{h:02d}:{m:02d}:{s:02d}',sep=sep)
+      print ('')
+
+    if item == 'recordings':
+      print ('Index','Name','Type','Start','End','Duration','Measurements',sep=sep)
+      for i in range (1,nb + 1):
+        recording = qrsi(str(i-1))
+        d,h,m,s = duration(recording['start_ts'], recording['end_ts'])
+        name = recording['name'].decode()
+        sample_interval = recording['sample_interval']
+        num_samples = recording['num_samples']
+        debut_d = time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts'])
+        fin_d = time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts'])
+        print(f'{i:d}',name,lib,debut_d,fin_d,
+              f'{d:02d}:{h:02d}:{m:02d}:{s:02d}',num_samples,sep=sep)
+      print ('')
 
 def qddb():
   bytes = meter_command("qddb")
@@ -88,53 +153,56 @@ def qddb():
   }
 
 def do_set(parameter):
+  start_serial(port)
   property = parameter[0]
-  value = parameter[1]
   match property:
     case 'company' | 'site' | 'operator' | 'contact':
+      if len(parameter) != 2: usage()
+      value = parameter[1]
       cmd = 'mpq ' + property + ",'" + value + "'\r"
+      res = meter_command(cmd)
+    case 'datetime':
+      if len(parameter) != 1: usage()
+      do_sync_time()
     case 'autohold_threshold':
-      cmd = 'mp aheventTh,' + value + '\r'
+      if len(parameter) != 2: usage()
+      value = parameter[1]
+    case 'names':
+      if len(parameter) != 3: usage()
+      if not parameter[1].isdigit(): usage()
+      index = int(parameter[1])
+      name = parameter[2]
+      cmd = 'savname ' + str(index-1) + ',"' + name + '"\r'
+      res = meter_command(cmd)
     case _:
       usage()
-  res = meter_command(cmd)
   print ("Sucsessfully set",property, "value")
 
-def do_names(name):
-  match len(name):
-    case 0:
-      for i in range (1,9):
-        cmd = 'qsavname ' + str(i-1) + '\r'
-        res = meter_command(cmd)
-        print (i,res[0].split('\r')[0],sep=sep)
-    case 1:
-      cmd = 'qsavname ' + str(int(name[0])-1) + '\r'
-      res = meter_command(cmd)
-      print (res[0].split('\r')[0])
-    case 2:
-      cmd = 'savname ' + str(int(name[0])-1) + ',"' + name[1] + '"\r'
-      res = meter_command(cmd)
-
-def do_info():
-  info = id()
-  print ("Model:",info['model_number'])
-  print ("Software Version:",info['software_version'])
-  print ("Serial Number:",info['serial_number'])
-  print ("Current meter time:",time.strftime('%Y-%m-%d %H:%M:%S',time.gmtime(int(clock()))))
-  print ("Company:",meter_command("qmpq company")[0].lstrip("'").rstrip("'"))
-  print ("Contact:",meter_command("qmpq contact")[0].lstrip("'").rstrip("'"))
-  print ("Operator:",meter_command("qmpq operator")[0].lstrip("'").rstrip("'"))
-  print ("Site:",meter_command("qmpq site")[0].lstrip("'").rstrip("'"))
-  print ("Autohold Threshold:",meter_command("qmp aheventTh")[0].lstrip("'").rstrip("'"))
-  print ("Language:",meter_command("qmp lang")[0].lstrip("'").rstrip("'"))
-  print ("Date Format:",meter_command("qmp dateFmt")[0].lstrip("'").rstrip("'"))
-  print ("Time Format:",meter_command("qmp timeFmt")[0].lstrip("'").rstrip("'"))
-  print ("Digits:",meter_command("qmp digits")[0].lstrip("'").rstrip("'"))
-  print ("Beeper:",meter_command("qmp beeper")[0].lstrip("'").rstrip("'"))
-  print ("Temperature Offset Shift:",meter_command("qmp tempOS")[0].lstrip("'").rstrip("'"))
-  print ("Numeric Format:",meter_command("qmp numFmt")[0].lstrip("'").rstrip("'"))
-  print ("Auto Backlight Timeout:",meter_command("qmp ablto")[0].lstrip("'").rstrip("'"))
-  print ("Auto Power Off:",meter_command("qmp apoffto")[0].lstrip("'").rstrip("'"))
+def do_show(conf_item):
+  start_serial(port)
+  if conf_item == 'info':
+    info = id()
+    print ("Model:",info['model_number'])
+    print ("Software Version:",info['software_version'])
+    print ("Serial Number:",info['serial_number'])
+    print ("Current meter time:",time.strftime('%Y-%m-%d %H:%M:%S',time.gmtime(int(clock()))))
+    print ("Company:",meter_command("qmpq company")[0].lstrip("'").rstrip("'"))
+    print ("Contact:",meter_command("qmpq contact")[0].lstrip("'").rstrip("'"))
+    print ("Operator:",meter_command("qmpq operator")[0].lstrip("'").rstrip("'"))
+    print ("Site:",meter_command("qmpq site")[0].lstrip("'").rstrip("'"))
+    print ("Autohold Threshold:",meter_command("qmp aheventTh")[0].lstrip("'").rstrip("'"))
+    print ("Language:",meter_command("qmp lang")[0].lstrip("'").rstrip("'"))
+    print ("Date Format:",meter_command("qmp dateFmt")[0].lstrip("'").rstrip("'"))
+    print ("Time Format:",meter_command("qmp timeFmt")[0].lstrip("'").rstrip("'"))
+    print ("Digits:",meter_command("qmp digits")[0].lstrip("'").rstrip("'"))
+    print ("Beeper:",meter_command("qmp beeper")[0].lstrip("'").rstrip("'"))
+    print ("Temperature Offset Shift:",meter_command("qmp tempOS")[0].lstrip("'").rstrip("'"))
+    print ("Numeric Format:",meter_command("qmp numFmt")[0].lstrip("'").rstrip("'"))
+    print ("Auto Backlight Timeout:",meter_command("qmp ablto")[0].lstrip("'").rstrip("'"))
+    print ("Auto Power Off:",meter_command("qmp apoffto")[0].lstrip("'").rstrip("'"))
+  elif conf_item == 'names':
+    names()
+  else: usage()
 
 def id():
   res = meter_command("ID")
@@ -338,8 +406,8 @@ def do_min_max_cmd(cmd, idx):
   # All bytes parsed
   return { 'seq_no' : get_u16(res, 0),
     'un2' : get_u16(res, 2),      # High byte of seq no?
-    'ts1' : parse_time(get_double(res, 4)),
-    'ts2' : parse_time(get_double(res, 12)),
+    'start_ts' : parse_time(get_double(res, 4)),
+    'end_ts' : parse_time(get_double(res, 12)),
     'prim_function' : get_map_value('primfunction', res, 20),
     'sec_function' : get_map_value('secfunction', res, 22),
     'autorange' : get_map_value('autorange', res, 24),
@@ -362,21 +430,8 @@ def do_saved_min_max(records):
   do_saved_min_max_peak(records, 'nb_min_max', 'qmmsi')
 
 def do_saved_min_max_peak(records, field, cmd):
+  start_serial(port)
   nb_min_max = int(qsls()[field])
-  if len(records) != 0:
-    if records[0] == 'list':
-      print ('#','start time','duration','name',sep=sep)
-      for i in range (1,nb_min_max+1):
-        measurement = do_min_max_cmd(cmd,str(i-1))
-        # print (measurement)
-        seconds = time.mktime(measurement['ts2']) - time.mktime(measurement['ts1'])
-        m, s = divmod(int(seconds), 60)
-        h, m = divmod(m, 60)
-        d, h = divmod(h, 24)
-        name = measurement['name'].decode()
-        debut_d = time.strftime('%Y-%m-%d %H:%M:%S',measurement['ts1'])
-        print(f'{i:d}',debut_d,f'{d:02d}:{h:02d}:{m:02d}:{s:02d}',name,sep=sep)
-      sys.exit()
   interval = []
   for i in range(1,nb_min_max+1):
     interval.append(str(i))
@@ -403,12 +458,12 @@ def do_saved_min_max_peak(records, field, cmd):
     sys.exit()
 
 def print_min_max_peak(measurement):
-  print ((measurement['name']).decode('utf-8'), 'start', time.strftime('%Y-%m-%d %H:%M:%S',measurement['ts1']), measurement['autorange'], 'Range', int(measurement['range_max ']), measurement['unit'])
+  print ((measurement['name']).decode('utf-8'), 'start', time.strftime('%Y-%m-%d %H:%M:%S',measurement['start_ts']), measurement['autorange'], 'Range', int(measurement['range_max ']), measurement['unit'])
   print_min_max_peak_detail(measurement, 'PRIMARY')
   print_min_max_peak_detail(measurement, 'MAXIMUM')
   print_min_max_peak_detail(measurement, 'AVERAGE')
   print_min_max_peak_detail(measurement, 'MINIMUM')
-  print ((measurement['name']).decode('utf-8'), 'end', time.strftime('%Y-%m-%d %H:%M:%S',measurement['ts2']))
+  print ((measurement['name']).decode('utf-8'), 'end', time.strftime('%Y-%m-%d %H:%M:%S',measurement['end_ts']))
 
 def print_min_max_peak_detail(measurement, detail):
   print ('\t',detail, \
@@ -417,6 +472,7 @@ def print_min_max_peak_detail(measurement, detail):
         time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings'][detail]['ts']),sep=sep)
 
 def do_saved_measurements(records):
+  start_serial(port)
   nb_measurements = int(qsls()['nb_measurements'])
   if len(records) != 0:
     if records[0] == 'list':
@@ -455,24 +511,8 @@ def do_saved_measurements(records):
     sys.exit()
 
 def do_recordings(records):
+  start_serial(port)
   nb_recordings = int(qsls()['nb_recordings'])
-  if len(records) != 0:
-    if records[0] == 'list':
-      print ('Index','Name','Start','End','Duration','Measurements',sep=sep)
-      for i in range (1,nb_recordings + 1):
-        recording = qrsi(str(i-1))
-        #print ('recording',recording)
-        seconds = time.mktime(recording['end_ts']) - time.mktime(recording['start_ts'])
-        m, s = divmod(int(seconds), 60)
-        h, m = divmod(m, 60)
-        d, h = divmod(h, 24)
-        name = recording['name'].decode()
-        sample_interval = recording['sample_interval']
-        num_samples = recording['num_samples']
-        debut_d = time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts'])
-        fin_d = time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts'])
-        print(f'{i:d}',name,debut_d,fin_d,f'{d:02d}:{h:02d}:{m:02d}:{s:02d}',num_samples,sep=sep)
-      sys.exit()
   interval = []
   for i in range(1,nb_recordings + 1):
     interval.append(str(i))
@@ -552,7 +592,7 @@ def data_is_ok(data):
   if len(data) < 2: return False
 
   # Non-OK status
-  if len(data) == 2 and chr(data[0]) != '0' and chr(data[1]) == "\r": return True
+  if len(data) == 2 and chr(data[0]) == '0' and chr(data[1]) == "\r": return True
 
   # Non-OK status with extra data on end
   if len(data) > 2 and chr(data[0]) != '0': return False
@@ -569,9 +609,6 @@ def read_retry(cmd):
 
   while retry_cmd_count < 20 and not data_is_ok(data):
     ser.write(cmd.encode()+b'\r')
-    # First sleep is longer to permit data to be available
-    # Don't remove it, it's very useful
-#    time.sleep (0.03)
     while retry_read_count < 20 and not data_is_ok(data):
       bytes_read = ser.read(ser.in_waiting)
       data += bytes_read
@@ -584,7 +621,7 @@ def read_retry(cmd):
     ser.reset_output_buffer()
     ser.close()
     ser.open()
-    time.sleep (0.1)
+    time.sleep (0.01)
 
     return data, False
 
@@ -625,9 +662,9 @@ def main():
      exit
   
   global sep
-  global ser
   global map_cache
   global timeout
+  global port
   sep = '\t'
   ser = None
   timeout = 0.09
@@ -640,47 +677,42 @@ def main():
   parser.add_argument("command", nargs="*", help="command used")
   args = parser.parse_args()
   
+  port = args.port
+
   if args.separator:
     sep = args.separator
 
   if args.timeout:
     timeout = float(args.timeout)
 
-  #serial port settings
-  try:
-    ser = serial.Serial(port=args.port, \
-          baudrate=115200, bytesize=8, parity='N', stopbits=1, \
-          timeout=timeout, rtscts=False, dsrdtr=False)
-  except serial.serialutil.SerialException as err:
-    print ('Serial Port ' + args.port + ' does not respond')
-    print (err)
-    sys.exit()
-  
   if len(args.command) == 0:
     usage()
 
   match args.command[0]:
-    case "recordings":
-      do_recordings(args.command[1:])
-    case "saved_measurements":
-      do_saved_measurements(args.command[1:])
-    case "saved_min_max":
-      do_saved_min_max(args.command[1:])
-    case "saved_peak":
-      do_saved_peak(args.command[1:])
-    case "info":
-      do_info()
-    case "sync_time":
-      do_sync_time()
+    case "get":
+      if len(args.command[1:]) != 2: usage()
+      series = args.command[2].split(",")
+      match args.command[1]:
+        case "recordings":
+          do_recordings(series)
+        case "saved_measurements":
+          do_saved_measurements(series)
+        case "saved_min_max":
+          do_saved_min_max(series)
+        case "saved_peak":
+          do_saved_peak(series)
+    case "show":
+      if len(args.command[1:]) != 1: usage()
+      if args.command[1] not in ['info','names']: usage()
+      do_show(args.command[1])
     case "set":
-      if len(args.command[1:]) != 2:
-        usage()
+      if len(args.command[1:]) not in [1,2,3]: usage()
       do_set(args.command[1:])
-    case "names":
-      if len(args.command[1:]) not in [0,1,2]:
-        usage()
-      do_names(args.command[1:])
-    case "measure_now":
-      do_measure_now()
+    case "display":
+      do_display()
+    case "list":
+      if len(args.command[1:]) != 1: usage()
+      if args.command[1] not in ['recordings','minmax','peak','all']: usage()
+      do_list(args.command[1])
     case _:
       usage()
