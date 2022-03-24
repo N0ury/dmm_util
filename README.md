@@ -31,32 +31,90 @@ None is calculated or processed
 1. - Using PyPi (the simplest way)  
 Latest **release** can be installed by typing:  
 `python -m pip install fluke_28x_dmm_util`  
->You can run the utility:  
->`python -m fluke_28x_dmm_util -p port...`
+[![PyPI version](https://badge.fury.io/py/fluke-28x-dmm-util.svg)](https://badge.fury.io/py/fluke-28x-dmm-util)  
+[![Downloads](https://pepy.tech/badge/fluke-28x-dmm-util)](https://pepy.tech/project/fluke-28x-dmm-util)
+
 
 2. - From github (newest version):  
 Latest **commit** can be used by typing:  
-`git clone https://github.com/N0ury/dmm_util.git`
+`git clone https://github.com/N0ury/dmm_util.git`  
 
->In this second case there are then two ways for running the utility 
->- without install
->```
->  cd dmm_util
->  python -m fluke_28x_dmm_util -p port...
->```
->- with install  
->```
->cd dmm_util
->python setup.py install
->or
->python setup.py install --user (if permission denied)
->```
->And then use with:  
->`python -m fluke_28x_dmm_util -p port...`
 
-3. -  From Github releasehttps://github.com/N0ury/dmm_util/releases  
+
+3. -  From Github [release](https://github.com/N0ury/dmm_util/releases)  
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/N0ury/dmm_util)  
 Get the latest release and unzip (or gunzip) it  
 cd to the folder that has been created and run the utility as shown above.
+
+
+**How to run the utility**  
+Main command is:  
+`python -m fluke_28x_dmm_util -p PORT ...`  
+
+**If you have installed the release (.zip or /tgz), you need to change directory to the one of installation. The directory before running the utility MUST be dmm_util.**
+
+If you have installed the PyPi version this is not necessary, and you can run the utility anywhere.  
+
+Syntax:  
+
+`python -m fluke_28x_dmm_util options command`  
+
+**options**  
+
+{-p|--port} PORT  
+This is mandatory, it's the port to which the DMM is connected (eg: COM3)   
+
+{-s|--separator} SEPARATOR  
+Separator is optional. Default is TAB  
+
+{-t|--timeout} TIMEOUT  
+Timeout is optional. Default is 0.09 (in seconds)  
+You need to change this only if timeouts occur.
+
+**command**  
+This depends on what you want to do  
+- get:  
+get recordings {name|index}[,{name|index}...]  
+get minmax {name|index}[,{name|index}...]  
+get peak {name|index}[,{name|index}...]  
+get measurements {name|index}[,{name|index}...]    
+
+name is the name used for a recording,index is the number  
+These informations can be displayed with `list` command  
+name can be surrounded by quotes in case it contains spaces  
+If this parameter contains only digits, it is assumed to be an index. Otherwise it will be taken as a name. Multiple names or indexes are permitted, they must be comma separated.
+
+Example:  
+get recordings 1,"Record 2",5  
+get recordings 3  
+
+This command displays detailed recordings informations
+- set:  
+set company value: set DMM company value  
+set operator value: set DMM operator value  
+set site value: set DMM site value  
+set contact value: set DMM contact value  
+set datetime: set DMM date and time to those of the PC  
+set names index name: set the name of index recording name  
+index is a value between 1 and 8. List can be obtained using `show names`  
+
+Example:  
+set operator N0ury  
+set name 2 Min_Max  
+
+- show  
+show names : display available names for recordings  
+show info : display DMM configuration
+- list  
+list recordings : list recording type recordings  
+list minmax : list minmax type recordings  
+list peak : list peak type recordings  
+list all : list all recordings
+
+This command displays general informations about recordings
+
+- display  
+Use this to display DMM realtime values.
 
 
 **Common issues**
@@ -85,6 +143,4 @@ Install it this way
 
 Copyright © 2011 Fredrik Valeur.  
 Copyright © 2017-2022 N0ury.
-
-
 
