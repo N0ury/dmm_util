@@ -12,11 +12,14 @@ import argparse
 import fluke_28x_dmm_util
 import binascii
 
-def usage():
+def version():
   print ('version:',fluke_28x_dmm_util.__version__)
+
+def usage():
+  print ('version:',version())
   print ("Usage: python -m [OPTIONS] fluke_28x_dmm_util] command")
   print ("Options:")
-  print ("  -p|--port <usb port>     Port name (ex: COM3). Defaults to /dev/ttyUSB0")
+  print ("  -p|--port <usb port>     Mandatory port name (ex: COM3)")
   print ("  -s|--separator separator Separator for lists and recorded values. Defaults to tab '\\t'")
   print ("  -t|--timeout timeout     Read timeout. Defaults to 0.09. Be careful changing this value")
   print ("                           the effect on total time is important")
@@ -94,12 +97,13 @@ def do_display():
     except KeyboardInterrupt:
       sys.exit()
 
-def duration(start_time, end_time):
+def format_duration(start_time, end_time):
   seconds = time.mktime(end_time) - time.mktime(start_time)
   m, s = divmod(int(seconds), 60)
   h, m = divmod(m, 60)
   d, h = divmod(h, 24)
-  return d,h,m,s
+  return f'{d:02d}:{h:02d}:{m:02d}:{s:02d}'
+  
 
 def do_list(type):
   start_serial(port)
@@ -124,26 +128,26 @@ def do_list(type):
       print ('Index','Name','Type','Start','End','Duration',sep=sep)
       for i in range (1,nb+1):
         mm = do_min_max_cmd(cmd, str(i-1))
-        d,h,m,s = duration(mm['start_ts'], mm['end_ts'])
+        duration = format_duration(mm['start_ts'], mm['end_ts'])
         name = mm['name'].decode()
         debut_d = time.strftime('%Y-%m-%d %H:%M:%S',mm['start_ts'])
         fin_d = time.strftime('%Y-%m-%d %H:%M:%S',mm['end_ts'])
         print(f'{i:d}',name,lib,debut_d,fin_d,
-              f'{d:02d}:{h:02d}:{m:02d}:{s:02d}',sep=sep)
+              duration,sep=sep)
       print ('')
 
     if item == 'recordings':
       print ('Index','Name','Type','Start','End','Duration','Measurements',sep=sep)
       for i in range (1,nb + 1):
         recording = qrsi(str(i-1))
-        d,h,m,s = duration(recording['start_ts'], recording['end_ts'])
+        duration = format_duration(recording['start_ts'], recording['end_ts'])
         name = recording['name'].decode()
         sample_interval = recording['sample_interval']
         num_samples = recording['num_samples']
         debut_d = time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts'])
         fin_d = time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts'])
         print(f'{i:d}',name,lib,debut_d,fin_d,
-              f'{d:02d}:{h:02d}:{m:02d}:{s:02d}',num_samples,sep=sep)
+              duration,num_samples,sep=sep)
       print ('')
 
 def qddb():
@@ -544,11 +548,7 @@ def do_recordings(records):
     if i.isdigit():
       recording = qrsi(str(int(i)-1))
       #print ('recording digit',recording)
-      seconds = time.mktime(recording['end_ts']) - time.mktime(recording['start_ts'])
-      m, s = divmod(int(seconds), 60)
-      h, m = divmod(m, 60)
-      d, h = divmod(h, 24)
-      duration = f'{d:02d}:{h:02d}:{m:02d}:{s:02d}'
+      duration = format_duration(recording['start_ts'], recording['end_ts'])
       print ('Index %s, Name %s, Start %s, End %s, Duration %s, Measurements %s' \
             % (str(i), (recording['name']).decode(),time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts']), duration, recording['num_samples']))
       print ('Start Time','Primary','','Maximum','','Average','','Minimum','','#Samples','Type',sep=sep)
@@ -578,6 +578,7 @@ def do_recordings(records):
         #print ('recording non digit',recording)
         if recording['name'] == i.encode():
           found = True
+          duration = format_duration(recording['start_ts'], recording['end_ts'])
           print ('Index %s, Name %s, Start %s, End %s, Duration %s, Measurements %s' \
             % (str(j), (recording['name']).decode(),time.strftime('%Y-%m-%d %H:%M:%S',recording['start_ts']),time.strftime('%Y-%m-%d %H:%M:%S',recording['end_ts']), duration, recording['num_samples']))
           print ('Start Time','Primary','','Maximum','','Average','','Minimum','','#Samples','Type',sep=sep)
@@ -689,9 +690,10 @@ def main():
   map_cache = {}
   
   parser = argparse.ArgumentParser()
-  parser.add_argument("-p", "--port", help="usb port used")
+  parser.add_argument("-p", "--port", help="usb port used (Mandatory)")
   parser.add_argument("-s", "--separator", help="custom separator (defaults to \\t")
-  parser.add_argument("-t", "--timeout", help="custom timeout (defaults to 0.09")
+  parser.add_argument("-t", "--timeout", help="custom timeout (defaults to 0.09)")
+  parser.add_argument("-v", "--version", help="show version and exit", action="store_true")
   parser.add_argument("command", nargs="*", help="command used")
   args = parser.parse_args()
   
@@ -702,6 +704,10 @@ def main():
 
   if args.timeout:
     timeout = float(args.timeout)
+
+  if args.version:
+    version()
+    sys.exit()
 
   if len(args.command) == 0:
     usage()
@@ -719,6 +725,8 @@ def main():
           do_saved_min_max(series)
         case "saved_peak":
           do_saved_peak(series)
+        case _:
+          usage()
     case "show":
       if len(args.command[1:]) != 1: usage()
       if args.command[1] not in ['info','names']: usage()
