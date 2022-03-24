@@ -28,9 +28,9 @@ def usage():
   print ("")
   print ("get")
   print ("  get recordings {name | index} [, {name | index}...]")
-  print ("  get saved_minmax {name | index} [, {name | index}...]")
-  print ("  get saved_peak {name | index} [, {name | index}...]")
-  print ("  get saved_measurements {name | index} [, {name | index}...]")
+  print ("  get minmax {name | index} [, {name | index}...]")
+  print ("  get peak {name | index} [, {name | index}...]")
+  print ("  get measurements {name | index} [, {name | index}...]")
   print ("")
   print ("  'name' is the name used for a recording, 'index' is a number")
   print ("  These data can be displayed with 'list' command,")
@@ -83,7 +83,7 @@ def do_sync_time():
   res=ser.read(2)
   if res == b'0\r': print ("Successfully synced the clock of the DMM")
   
-def do_display():
+def do_current():
   start_serial(port)
   while True:
     try:
@@ -714,17 +714,24 @@ def main():
 
   match args.command[0]:
     case "get":
-      if len(args.command[1:]) != 2: usage()
-      series = args.command[2].split(",")
+      if len(args.command[1:]) == 2:
+        series = args.command[2].split(",")
       match args.command[1]:
         case "recordings":
+          if len(args.command[1:]) != 2: usage()
           do_recordings(series)
-        case "saved_measurements":
+        case "measurements":
+          if len(args.command[1:]) != 2: usage()
           do_saved_measurements(series)
-        case "saved_min_max":
+        case "minmax":
+          if len(args.command[1:]) != 2: usage()
           do_saved_min_max(series)
-        case "saved_peak":
+        case "peak":
+          if len(args.command[1:]) != 2: usage()
           do_saved_peak(series)
+        case "current":
+          if len(args.command[1:]) != 1: usage()
+          do_current()
         case _:
           usage()
     case "show":

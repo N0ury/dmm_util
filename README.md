@@ -75,9 +75,9 @@ You need to change this only if timeouts occur.
 This depends on what you want to do  
 - get:  
 get recordings {name|index}[,{name|index}...]  
-get saved_minmax {name|index}[,{name|index}...]  
-get saved_peak {name|index}[,{name|index}...]  
-get saved_measurements {name|index}[,{name|index}...]    
+get minmax {name|index}[,{name|index}...]  
+get peak {name|index}[,{name|index}...]  
+get measurements {name|index}[,{name|index}...]    
 
 name is the name used for a recording,index is the number  
 These informations can be displayed with `list` command  
