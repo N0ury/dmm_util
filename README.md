@@ -74,48 +74,48 @@ You need to change this only if timeouts occur.
 **command**  
 This depends on what you want to do  
 - get:  
-get recordings {name|index}[,{name|index}...]  
-get minmax {name|index}[,{name|index}...]  
-get peak {name|index}[,{name|index}...]  
-get measurements {name|index}[,{name|index}...]    
+get recordings {name | index} [, {name | index}...]  
+get minmax {name | index} [, {name | index}...]  
+get peak {name | index} [, {name | index}...]  
+get measurements {name | index} [, {name | index}...]  
+get current: get current measured values  
+get config: get DMM configuration  
+get names: get DMM names prefix used for storing data  
 
-name is the name used for a recording,index is the number  
-These informations can be displayed with `list` command  
-name can be surrounded by quotes in case it contains spaces  
-If this parameter contains only digits, it is assumed to be an index. Otherwise it will be taken as a name. Multiple names or indexes are permitted, they must be comma separated.
+'name' is the name used for a recording, 'index' is a number  
+These data can be displayed with 'list' command,  
+'name' can be surrounded by quotes in case it contains spaces.  
+If this parameter contains only digits, value is assumed to be an index.  
+Otherwise, it will be taken as a name. Multiple names or indexes are permitted, they must be comma separated.  
 
 Example:  
 get recordings 1,"Record 2",5  
 get recordings 3  
 
 This command displays detailed recordings informations
+
 - set:  
-set company value: set DMM company value  
-set operator value: set DMM operator value  
-set site value: set DMM site value  
-set contact value: set DMM contact value  
-set datetime: set DMM date and time to those of the PC  
-set names index name: set the name of index recording name  
-index is a value between 1 and 8. List can be obtained using `show names`  
+set company <value>: set DMM company name  
+set operator <value>: set DMM operator name  
+set site <value>: set DMM site name  
+set contact <value>: set DMM contact name  
+set datetime: set DMM date and time to the PC current date/time  
+set names <index> <name>: set the name of recording at given index  
+
+'index' is a value between 1 and 8. List can be obtained using 'get names'.  
 
 Example:  
 set operator N0ury  
 set name 2 Min_Max  
 
-- show  
-show names : display available names for recordings  
-show info : display DMM configuration
 - list  
-list recordings : list recording type recordings  
-list minmax : list minmax type recordings  
-list peak : list peak type recordings  
-list all : list all recordings
+list recordings: list recording type recordings  
+list minmax: list min/max type recordings  
+list peak: list peak type recordings  
+list measurements: list all the measurements  
+list all: list all the memory stored values  
 
-This command displays general informations about recordings
-
-- display  
-Use this to display DMM realtime values.
-
+This command displays general informations about recordings  
 
 **Common issues**
 ```

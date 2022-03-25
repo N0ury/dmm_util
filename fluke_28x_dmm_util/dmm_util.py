@@ -32,6 +32,8 @@ def usage():
   print ("  get peak {name | index} [, {name | index}...]")
   print ("  get measurements {name | index} [, {name | index}...]")
   print ("  get current: get current measured values")
+  print ("  get config: get DMM configuration")
+  print ("  get names: get DMM names prefix used for storing data")
   print ("")
   print ("  'name' is the name used for a recording, 'index' is a number")
   print ("  These data can be displayed with 'list' command,")
@@ -47,11 +49,7 @@ def usage():
   print ("  set datetime: set DMM date and time to the PC current date/time")
   print ("  set names <index> <name>: set the name of recording at given index")
   print ("")
-  print ("  'index' is a value between 1 and 8. List can be obtained using 'show names'.")
-  print ("")
-  print ("show")
-  print ("  show names: display available recording names")
-  print ("  show info: display DMM configuration")
+  print ("  'index' is a value between 1 and 8. List can be obtained using 'get names'.")
   print ("")
   print ("list")
   print ("  list recordings: list recording type recordings")
@@ -62,7 +60,8 @@ def usage():
   print ("")
   sys.exit()
 
-def names():
+def do_get_names():
+  start_serial(port)
   for i in range (1,9):
     cmd = 'qsavname ' + str(i-1) + '\r'
     res = meter_command(cmd)
@@ -209,31 +208,27 @@ def do_set(parameter):
       usage()
   print ("Successfully set",property, "value")
 
-def do_show(conf_item):
+def do_get_config():
   start_serial(port)
-  if conf_item == 'info':
-    info = id()
-    print ("Model:",info['model_number'])
-    print ("Software Version:",info['software_version'])
-    print ("Serial Number:",info['serial_number'])
-    print ("Current meter time:",time.strftime('%Y-%m-%d %H:%M:%S',time.gmtime(int(clock()))))
-    print ("Company:",meter_command("qmpq company")[0].lstrip("'").rstrip("'"))
-    print ("Contact:",meter_command("qmpq contact")[0].lstrip("'").rstrip("'"))
-    print ("Operator:",meter_command("qmpq operator")[0].lstrip("'").rstrip("'"))
-    print ("Site:",meter_command("qmpq site")[0].lstrip("'").rstrip("'"))
-    print ("Autohold Threshold:",meter_command("qmp aheventTh")[0].lstrip("'").rstrip("'"))
-    print ("Language:",meter_command("qmp lang")[0].lstrip("'").rstrip("'"))
-    print ("Date Format:",meter_command("qmp dateFmt")[0].lstrip("'").rstrip("'"))
-    print ("Time Format:",meter_command("qmp timeFmt")[0].lstrip("'").rstrip("'"))
-    print ("Digits:",meter_command("qmp digits")[0].lstrip("'").rstrip("'"))
-    print ("Beeper:",meter_command("qmp beeper")[0].lstrip("'").rstrip("'"))
-    print ("Temperature Offset Shift:",meter_command("qmp tempOS")[0].lstrip("'").rstrip("'"))
-    print ("Numeric Format:",meter_command("qmp numFmt")[0].lstrip("'").rstrip("'"))
-    print ("Auto Backlight Timeout:",meter_command("qmp ablto")[0].lstrip("'").rstrip("'"))
-    print ("Auto Power Off:",meter_command("qmp apoffto")[0].lstrip("'").rstrip("'"))
-  elif conf_item == 'names':
-    names()
-  else: usage()
+  info = id()
+  print ("Model:",info['model_number'])
+  print ("Software Version:",info['software_version'])
+  print ("Serial Number:",info['serial_number'])
+  print ("Current meter time:",time.strftime('%Y-%m-%d %H:%M:%S',time.gmtime(int(clock()))))
+  print ("Company:",meter_command("qmpq company")[0].lstrip("'").rstrip("'"))
+  print ("Contact:",meter_command("qmpq contact")[0].lstrip("'").rstrip("'"))
+  print ("Operator:",meter_command("qmpq operator")[0].lstrip("'").rstrip("'"))
+  print ("Site:",meter_command("qmpq site")[0].lstrip("'").rstrip("'"))
+  print ("Autohold Threshold:",meter_command("qmp aheventTh")[0].lstrip("'").rstrip("'"))
+  print ("Language:",meter_command("qmp lang")[0].lstrip("'").rstrip("'"))
+  print ("Date Format:",meter_command("qmp dateFmt")[0].lstrip("'").rstrip("'"))
+  print ("Time Format:",meter_command("qmp timeFmt")[0].lstrip("'").rstrip("'"))
+  print ("Digits:",meter_command("qmp digits")[0].lstrip("'").rstrip("'"))
+  print ("Beeper:",meter_command("qmp beeper")[0].lstrip("'").rstrip("'"))
+  print ("Temperature Offset Shift:",meter_command("qmp tempOS")[0].lstrip("'").rstrip("'"))
+  print ("Numeric Format:",meter_command("qmp numFmt")[0].lstrip("'").rstrip("'"))
+  print ("Auto Backlight Timeout:",meter_command("qmp ablto")[0].lstrip("'").rstrip("'"))
+  print ("Auto Power Off:",meter_command("qmp apoffto")[0].lstrip("'").rstrip("'"))
 
 def id():
   res = meter_command("ID")
@@ -740,12 +735,14 @@ def main():
         case "current":
           if len(args.command[1:]) != 1: usage()
           do_current()
+        case "config":
+          if len(args.command[1:]) != 1: usage()
+          do_get_config()
+        case "names":
+          if len(args.command[1:]) != 1: usage()
+          do_get_names()
         case _:
           usage()
-    case "show":
-      if len(args.command[1:]) != 1: usage()
-      if args.command[1] not in ['info','names']: usage()
-      do_show(args.command[1])
     case "set":
       if len(args.command[1:]) not in [1,2,3]: usage()
       do_set(args.command[1:])

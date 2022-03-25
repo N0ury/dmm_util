@@ -5,6 +5,11 @@ This Changelog starts with version v0.3.0
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2022-03-25
+### Changed
+- show command is replaced by get
+- README.md is changed accordingly
+
 ## [0.3.4] - 2022-03-25
 ### Added
 - names function is restored
