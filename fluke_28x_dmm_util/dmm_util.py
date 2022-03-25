@@ -47,9 +47,10 @@ def usage():
   print ("  set datetime: set DMM date and time to the PC current date/time")
   print ("  set names <index> <name>: set the name of recording at given index")
   print ("")
-  print ("  'index' is a value between 1 and 8. List can be obtained using 'list recordings' command.")
+  print ("  'index' is a value between 1 and 8. List can be obtained using 'show names'.")
   print ("")
   print ("show")
+  print ("  show names: display available recording names")
   print ("  show info: display DMM configuration")
   print ("")
   print ("list")
@@ -61,6 +62,12 @@ def usage():
   print ("")
   sys.exit()
 
+def names():
+  for i in range (1,9):
+    cmd = 'qsavname ' + str(i-1) + '\r'
+    res = meter_command(cmd)
+    print (i,res[0].split('\r')[0],sep=sep)
+
 def start_serial(port):
   global ser
   #serial port settings
@@ -71,7 +78,7 @@ def start_serial(port):
   except serial.serialutil.SerialException as err:
     print ('Serial port ' + port + ' does not respond')
     print (err)
-    sys.exit()
+    sys.exit(1)
   
 def do_sync_time():
   lt = timegm(datetime.datetime.now().utctimetuple())
@@ -93,7 +100,7 @@ def do_current():
             "=>", \
             res['prim_function'])
     except KeyboardInterrupt:
-      sys.exit()
+      sys.exit(2)
 
 def format_duration(start_time, end_time):
   seconds = time.mktime(end_time) - time.mktime(start_time)
@@ -147,6 +154,10 @@ def do_list(type):
         print(f'{i:d}',name,lib,debut_d,fin_d,
               duration,num_samples,sep=sep)
       print ('')
+
+  if type == 'all':
+    do_saved_measurements()
+    print ('')
 
 def qddb():
   bytes = meter_command("qddb")
@@ -475,7 +486,7 @@ def do_saved_min_max_peak(records, field, cmd):
           break
   if not found:
     print ("Saved names not found")
-    sys.exit()
+    sys.exit(3)
 
 def print_min_max_peak(measurement):
   print ((measurement['name']).decode('utf-8'), 'start', time.strftime('%Y-%m-%d %H:%M:%S',measurement['start_ts']), measurement['autorange'], 'Range', int(measurement['range_max ']), measurement['unit'])
@@ -491,26 +502,25 @@ def print_min_max_peak_detail(measurement, detail):
         measurement['readings'][detail]['unit'], \
         time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings'][detail]['ts']),sep=sep)
 
-def do_saved_measurements(records):
+def do_saved_measurements(records=None):
   start_serial(port)
   nb_measurements = int(qsls()['nb_measurements'])
-  if len(records) != 0:
-    if records[0] == 'list':
-      print ('list: invalid option')
-      sys.exit()
   interval = []
   for i in range(1,nb_measurements + 1):
     interval.append(str(i))
   found = False
-  if len(records) == 0:
+  if records is None:
     series = interval
   else:
     series = records
 
+  print ('Index','Name','Type','Datetime','Measurement','Unit',sep=sep)
+
   for i in series:
     if i.isdigit():
       measurement = qsmr(str(int(i)-1))
-      print ((measurement['name']).decode('utf-8'), \
+      print (i,(measurement['name']).decode('utf-8'), \
+          'Measurement', \
           time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings']['PRIMARY']['ts']), \
           measurement['readings']['PRIMARY']['value'], \
           measurement['readings']['PRIMARY']['unit'],sep=sep)
@@ -520,15 +530,15 @@ def do_saved_measurements(records):
         measurement = qsmr(str(int(j)-1))
         if measurement['name'] == i.encode():
           found = True
-          print ((measurement['name']).decode('utf-8'), \
+          print (j,(measurement['name']).decode('utf-8'), \
+              'Measurement', \
               time.strftime('%Y-%m-%d %H:%M:%S',measurement['readings']['PRIMARY']['ts']), \
-              ":", \
               measurement['readings']['PRIMARY']['value'], \
               measurement['readings']['PRIMARY']['unit'],sep=sep)
           break
   if not found:
     print ("Saved names not found")
-    sys.exit()
+    sys.exit(4)
 
 def do_recordings(records):
   start_serial(port)
@@ -602,7 +612,7 @@ def do_recordings(records):
           break
   if not found:
     print ("Saved names not found")
-    sys.exit()
+    sys.exit(5)
 
 def data_is_ok(data):
   # No status code yet
@@ -649,7 +659,7 @@ def meter_command(cmd):
     data,result_ok = read_retry(cmd)
     if data == b'':
       print ('Did not receive data from DMM')
-      sys.exit(1)
+      sys.exit(6)
     status = chr(data[0])
     if status == '0' and chr(data[1]) == '\r': break
     if result_ok: break
@@ -659,10 +669,10 @@ def meter_command(cmd):
   if status != '0':
 #    print ("Command: %s failed. Status=%c" % (cmd, status))
     print ("Invalid value")
-    sys.exit()
+    sys.exit(7)
   if chr(data[1]) != '\r':
     print ('Did not receive complete reply from DMM')
-    sys.exit(1)
+    sys.exit(8)
 
   binary = data[2:4] == b'#0'
 
@@ -675,8 +685,8 @@ def meter_command(cmd):
 def main():
   argc = len(sys.argv)
   if argc <= 2:
-     usage();
-     exit
+     usage()
+     sys.exit(9)
   
   global sep
   global map_cache
@@ -743,7 +753,10 @@ def main():
       do_display()
     case "list":
       if len(args.command[1:]) != 1: usage()
-      if args.command[1] not in ['recordings','minmax','peak','all']: usage()
+      if args.command[1] not in ['recordings','minmax','peak','all','measurements']: usage()
+      if args.command[1] == 'measurements':
+        do_saved_measurements()
+        sys.exit()
       do_list(args.command[1])
     case _:
       usage()
