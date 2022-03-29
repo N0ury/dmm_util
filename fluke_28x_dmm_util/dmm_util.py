@@ -334,8 +334,7 @@ def get_multimap_value(map_name, string, offset):
     #  print "in get_multimap_value,value=",value
     if value not in map:
         raise ValueError('By app: Can not find key %s in map %s' % (value, map_name))
-    ret = []
-    ret.append(map[value])
+    ret = [map[value]]
     #  print "in get_multimap_value,ret=",ret
     #  print "+++>",value,map[value],"ret",ret
     return ret
