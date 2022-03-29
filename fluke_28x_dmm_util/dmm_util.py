@@ -117,7 +117,7 @@ def format_duration(start_time, end_time):
     return f'{d:02d}:{h:02d}:{m:02d}:{s:02d}'
 
 
-def do_list(type):
+def do_list(kind_rec):
     start_serial(port)
     nb = qsls()
     nbr = int(nb['nb_recordings'])
@@ -125,12 +125,12 @@ def do_list(type):
     nbp = int(nb['nb_peak'])
 
     items = {}
-    if type == 'recordings':
-        items[type] = {'cmd': 'qrsi', 'nb': nbr, 'lib': 'Recording'}
-    elif type == 'minmax':
-        items[type] = {'cmd': 'qmmsi', 'nb': nbmm, 'lib': 'MinMax'}
-    elif type == 'peak':
-        items[type] = {'cmd': 'qpsi', 'nb': nbp, 'lib': 'Peak'}
+    if kind_rec == 'recordings':
+        items[kind_rec] = {'cmd': 'qrsi', 'nb': nbr, 'lib': 'Recording'}
+    elif kind_rec == 'minmax':
+        items[kind_rec] = {'cmd': 'qmmsi', 'nb': nbmm, 'lib': 'MinMax'}
+    elif kind_rec == 'peak':
+        items[kind_rec] = {'cmd': 'qpsi', 'nb': nbp, 'lib': 'Peak'}
     else:
         items = {'minmax': {'cmd': 'qmmsi', 'nb': nbmm, 'lib': 'MinMax'},
                  'peak': {'cmd': 'qpsi', 'nb': nbp, 'lib': 'Peak'},
@@ -158,7 +158,7 @@ def do_list(type):
                 recording = qrsi(str(i - 1))
                 duration = format_duration(recording['start_ts'], recording['end_ts'])
                 name = recording['name'].decode()
-                sample_interval = recording['sample_interval']
+                # sample_interval = recording['sample_interval']
                 num_samples = recording['num_samples']
                 debut_d = time.strftime('%Y-%m-%d %H:%M:%S', recording['start_ts'])
                 fin_d = time.strftime('%Y-%m-%d %H:%M:%S', recording['end_ts'])
@@ -166,45 +166,45 @@ def do_list(type):
                       duration, num_samples, sep=sep)
             print('')
 
-    if type == 'all':
+    if kind_rec == 'all':
         do_saved_measurements()
         print('')
 
 
 def qddb():
-    bytes = meter_command("qddb")
+    current_bytes = meter_command("qddb")
 
-    reading_count = get_u16(bytes, 32)
-    if len(bytes) != reading_count * 30 + 34:
+    reading_count = get_u16(current_bytes, 32)
+    if len(current_bytes) != reading_count * 30 + 34:
         raise ValueError(
-            'By app: qddb parse error, expected %d bytes, got %d' % ((reading_count * 30 + 34), len(bytes)))
+            'By app: qddb parse error, expected %d bytes, got %d' % ((reading_count * 30 + 34), len(current_bytes)))
     # tsval = get_double(bytes, 20)
     # all bytes parsed
     return {
-        'prim_function': get_map_value('primfunction', bytes, 0),
-        'sec_function': get_map_value('secfunction', bytes, 2),
-        'auto_range': get_map_value('autorange', bytes, 4),
-        'unit': get_map_value('unit', bytes, 6),
-        'range_max': get_double(bytes, 8),
-        'unit_multiplier': get_s16(bytes, 16),
-        'bolt': get_map_value('bolt', bytes, 18),
+        'prim_function': get_map_value('primfunction', current_bytes, 0),
+        'sec_function': get_map_value('secfunction', current_bytes, 2),
+        'auto_range': get_map_value('autorange', current_bytes, 4),
+        'unit': get_map_value('unit', current_bytes, 6),
+        'range_max': get_double(current_bytes, 8),
+        'unit_multiplier': get_s16(current_bytes, 16),
+        'bolt': get_map_value('bolt', current_bytes, 18),
         #    'ts' : (tsval < 0.1) ? nil : parse_time(tsval), # 20
         'ts': 0,
-        'mode': get_multimap_value('mode', bytes, 28),
-        'un1': get_u16(bytes, 30),
+        'mode': get_multimap_value('mode', current_bytes, 28),
+        'un1': get_u16(current_bytes, 30),
         # 32 is reading count
-        'readings': parse_readings(bytes[34:])
+        'readings': parse_readings(current_bytes[34:])
     }
 
 
 def do_set(parameter):
     start_serial(port)
-    property = parameter[0]
-    match property:
+    property_name = parameter[0]
+    match property_name:
         case 'company' | 'site' | 'operator' | 'contact':
             if len(parameter) != 2: usage()
             value = parameter[1]
-            cmd = 'mpq ' + property + ",'" + value + "'\r"
+            cmd = 'mpq ' + property_name + ",'" + value + "'\r"
             meter_command(cmd)
         case 'datetime':
             if len(parameter) != 1: usage()
@@ -221,12 +221,12 @@ def do_set(parameter):
             meter_command(cmd)
         case _:
             usage()
-    print("Successfully set", property, "value")
+    print("Successfully set", property_name, "value")
 
 
 def do_get_config():
     start_serial(port)
-    info = id()
+    info = meter_id()
     print("Model:", info['model_number'])
     print("Software Version:", info['software_version'])
     print("Serial Number:", info['serial_number'])
@@ -247,7 +247,7 @@ def do_get_config():
     print("Auto Power Off:", meter_command("qmp apoffto")[0].lstrip("'").rstrip("'"))
 
 
-def id():
+def meter_id():
     res = meter_command("ID")
     return {'model_number': res[0], 'software_version': res[1], 'serial_number': res[2]}
 
@@ -264,6 +264,7 @@ def clock():
 
 def qsrr(reading_idx, sample_idx):
     retry_count = 0
+    res = ''
     while retry_count < 20:
         #    print ("in qsrr reading_idx=",reading_idx,",sample_idx",sample_idx)
         res = meter_command("qsrr " + reading_idx + "," + sample_idx)
@@ -291,8 +292,8 @@ def parse_readings(reading_bytes):
     # print ("in parse_readings,reading_bytes=",reading_bytes,"lgr:",len(reading_bytes))
     readings = {}
     chunks, chunk_size = len(reading_bytes), 30
-    l = [reading_bytes[i:i + chunk_size] for i in range(0, chunks, chunk_size)]
-    for r in l:
+    list_readings = [reading_bytes[i:i + chunk_size] for i in range(0, chunks, chunk_size)]
+    for r in list_readings:
         readings[get_map_value('readingid', r, 0)] = {
             'value': get_double(r, 2),
             'unit': get_map_value('unit', r, 10),
@@ -310,31 +311,31 @@ def parse_readings(reading_bytes):
 def get_map_value(map_name, string, offset):
     #  print "map_name",map_name,"in map_cache",map_name in map_cache
     if map_name in map_cache:
-        map = map_cache[map_name]
+        dmm_map = map_cache[map_name]
     else:
-        map = qemap(map_name)
-        map_cache[map_name] = map
+        dmm_map = qemap(map_name)
+        map_cache[map_name] = dmm_map
     value = str(get_u16(string, offset))
-    if value not in map:
+    if value not in dmm_map:
         raise ValueError('By app: Can not find key %s in map %s' % (value, map_name))
     # print ("--->",map_name,value,map[value])
-    return map[value]
+    return dmm_map[value]
 
 
 def get_multimap_value(map_name, string, offset):
     #  print "in get_multimap_value,map_name=",map_name
     #  print "map_name",map_name,"in map_cache",map_name in map_cache
     if map_name in map_cache:
-        map = map_cache[map_name]
+        dmm_map = map_cache[map_name]
     else:
-        map = qemap(map_name)
-        map_cache[map_name] = map
+        dmm_map = qemap(map_name)
+        map_cache[map_name] = dmm_map
     #  print "in get_multimap_value,map=",map
     value = str(get_u16(string, offset))
     #  print "in get_multimap_value,value=",value
-    if value not in map:
+    if value not in dmm_map:
         raise ValueError('By app: Can not find key %s in map %s' % (value, map_name))
-    ret = [map[value]]
+    ret = [dmm_map[value]]
     #  print "in get_multimap_value,ret=",ret
     #  print "+++>",value,map[value],"ret",ret
     return ret
@@ -349,11 +350,11 @@ def qemap(map_name):
     # print("in qemap. entry_count=",entry_count)
     if len(res) != entry_count * 2:
         raise ValueError('By app: Error parsing qemap')
-    map = {}
+    dmm_map = {}
     for i in range(0, len(res), 2):
-        map[res[i]] = res[i + 1]
+        dmm_map[res[i]] = res[i + 1]
     #  print "map dans qemap:",map
-    return map
+    return dmm_map
 
 
 def get_s16(string, offset):  # Il faut valider le portage de cette fonction
@@ -767,6 +768,7 @@ def main():
     if len(args.command) == 0:
         usage()
 
+    series = ''
     match args.command[0]:
         case "get":
             if len(args.command[1:]) == 2:
