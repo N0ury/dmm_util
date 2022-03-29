@@ -3,7 +3,6 @@
 
 import serial
 import time
-from time import gmtime, strftime
 import struct
 import sys
 import datetime
@@ -179,7 +178,7 @@ def qddb():
     if len(bytes) != reading_count * 30 + 34:
         raise ValueError(
             'By app: qddb parse error, expected %d bytes, got %d' % ((reading_count * 30 + 34), len(bytes)))
-    tsval = get_double(bytes, 20)
+    # tsval = get_double(bytes, 20)
     # all bytes parsed
     return {
         'prim_function': get_map_value('primfunction', bytes, 0),
@@ -344,11 +343,11 @@ def get_multimap_value(map_name, string, offset):
 
 def qemap(map_name):
     res = meter_command("qemap " + str(map_name))
-    #  print "Traitement de la map: ",map_name
-    #  print "res dans qemap=",res
-    #  print "in qemap. Longueur=",len(res)
+    # print("Traitement de la map: ", map_name)
+    # print("res dans qemap=",res)
+    # print("in qemap. Longueur=",len(res))
     entry_count = int(res.pop(0))
-    #  print "in qemap. entry_count=",entry_count
+    # print("in qemap. entry_count=",entry_count)
     if len(res) != entry_count * 2:
         raise ValueError('By app: Error parsing qemap')
     map = {}
@@ -406,7 +405,7 @@ def qrsi(idx):
         'event_threshold': get_double(res, 28),
         'reading_index': get_u16(res, 36),  # 32 bits?
         'un3': get_u16(res, 38),
-        'num_samples': get_u16(res, 40),  # Is this 32 bits? Whats in 42
+        'num_samples': get_u16(res, 40),  # Is this 32 bits? What's in 42
         'un4': get_u16(res, 42),
         'prim_function': get_map_value('primfunction', res, 44),
         'sec_function': get_map_value('secfunction', res, 46),  # sec?
