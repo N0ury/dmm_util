@@ -74,10 +74,10 @@ You need to change this only if timeouts occur.
 **command**  
 This depends on what you want to do  
 - get:  
-get recordings {name | index} [, {name | index}...]  
-get minmax {name | index} [, {name | index}...]  
-get peak {name | index} [, {name | index}...]  
-get measurements {name | index} [, {name | index}...]  
+get recordings {name | index} [,{name | index}...]  
+get minmax {name | index} [,{name | index}...]  
+get peak {name | index} [,{name | index}...]  
+get measurements {name | index} [,{name | index}...]  
 get current: get current measured values  
 get config: get DMM configuration  
 get names: get DMM names prefix used for storing data  
@@ -86,7 +86,7 @@ get names: get DMM names prefix used for storing data
 These data can be displayed with 'list' command,  
 'name' can be surrounded by quotes in case it contains spaces.  
 If this parameter contains only digits, value is assumed to be an index.  
-Otherwise, it will be taken as a name. Multiple names or indexes are permitted, they must be comma separated.  
+Otherwise, it will be taken as a name. Multiple names or indexes are permitted, they must be comma separated, with no spaces before or after the commas.  
 
 Example:  
 get recordings 1,"Record 2",5  

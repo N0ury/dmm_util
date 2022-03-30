@@ -28,10 +28,10 @@ def usage():
     print("Command:")
     print("")
     print("get")
-    print("  get recordings {name | index} [, {name | index}...]")
-    print("  get minmax {name | index} [, {name | index}...]")
-    print("  get peak {name | index} [, {name | index}...]")
-    print("  get measurements {name | index} [, {name | index}...]")
+    print("  get recordings {name | index} [,{name | index}...]")
+    print("  get minmax {name | index} [,{name | index}...]")
+    print("  get peak {name | index} [,{name | index}...]")
+    print("  get measurements {name | index} [,{name | index}...]")
     print("  get current: get current measured values")
     print("  get config: get DMM configuration")
     print("  get names: get DMM names prefix used for storing data")
@@ -42,7 +42,7 @@ def usage():
     print("  If this parameter contains only digits, value is assumed to be an index.")
     print(
         "  Otherwise, it will be taken as a name. Multiple names or indexes are permitted, they must be comma "
-        "separated.")
+        "separated, with no spaces before or after the commas.")
     print("")
     print("set")
     print("  set company <value>: set DMM company name")
