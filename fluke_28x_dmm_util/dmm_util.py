@@ -65,15 +65,16 @@ def usage():
 
 
 def do_get_names():
-    start_serial(port)
+    start_serial()
     for i in range(1, 9):
         cmd = 'qsavname ' + str(i - 1) + '\r'
         res = meter_command(cmd)
         print(i, res[0].split('\r')[0], sep=sep)
 
 
-def start_serial(port):
+def start_serial():
     global ser
+    global port
     # serial port settings
     try:
         ser = serial.Serial(port=port,
@@ -95,7 +96,7 @@ def do_sync_time():
 
 
 def do_current():
-    start_serial(port)
+    start_serial()
     while True:
         try:
             res = qddb()
@@ -118,7 +119,7 @@ def format_duration(start_time, end_time):
 
 
 def do_list(kind_rec):
-    start_serial(port)
+    start_serial()
     nb = qsls()
     nbr = int(nb['nb_recordings'])
     nbmm = int(nb['nb_min_max'])
@@ -198,7 +199,7 @@ def qddb():
 
 
 def do_set(parameter):
-    start_serial(port)
+    start_serial()
     property_name = parameter[0]
     match property_name:
         case 'company' | 'site' | 'operator' | 'contact':
@@ -209,9 +210,9 @@ def do_set(parameter):
         case 'datetime':
             if len(parameter) != 1: usage()
             do_sync_time()
-        case 'autohold_threshold':
-            if len(parameter) != 2: usage()
-            value = parameter[1]
+        # case 'autohold_threshold':
+        #     if len(parameter) != 2: usage()
+        #     value = parameter[1]
         case 'names':
             if len(parameter) != 3: usage()
             if not parameter[1].isdigit(): usage()
@@ -225,7 +226,7 @@ def do_set(parameter):
 
 
 def do_get_config():
-    start_serial(port)
+    start_serial()
     info = meter_id()
     print("Model:", info['model_number'])
     print("Software Version:", info['software_version'])
@@ -494,7 +495,7 @@ def do_saved_min_max(records):
 
 
 def do_saved_min_max_peak(records, field, cmd):
-    start_serial(port)
+    start_serial()
     nb_min_max = int(qsls()[field])
     interval = []
     for i in range(1, nb_min_max + 1):
@@ -540,7 +541,7 @@ def print_min_max_peak_detail(measurement, detail):
 
 
 def do_saved_measurements(records=None):
-    start_serial(port)
+    start_serial()
     nb_measurements = int(qsls()['nb_measurements'])
     interval = []
     for i in range(1, nb_measurements + 1):
@@ -579,7 +580,7 @@ def do_saved_measurements(records=None):
 
 
 def do_recordings(records):
-    start_serial(port)
+    start_serial()
     nb_recordings = int(qsls()['nb_recordings'])
     interval = []
     for i in range(1, nb_recordings + 1):
@@ -738,12 +739,8 @@ def main():
         sys.exit(9)
 
     global sep
-    global map_cache
     global timeout
     global port
-    sep = '\t'
-    timeout = 0.09
-    map_cache = {}
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port", help="usb port used (Mandatory)")
@@ -809,3 +806,10 @@ def main():
             do_list(args.command[1])
         case _:
             usage()
+
+
+sep = '\t'
+timeout = 0.09
+map_cache = {}
+ser = serial.Serial()
+port = ''
