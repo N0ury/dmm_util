@@ -5,6 +5,15 @@ This Changelog starts with version v0.3.0
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.8] - 2022-04-02
+### Changed
+-Add -o|--overloads option to avoid displaying lines containing overlods or invalid values stored as 9.99999999e+37
+- correction of the syntax of the "get" commands by removing the spaces before and after the commas
+- Cleaning of useless import
+- management of global variables is changed
+- replacement of variable names that are reserved words
+- code cleaning
+
 ## [0.3.6] - 2022-03-25
 ### Changed
 - show command is replaced by get
