@@ -71,6 +71,10 @@ Separator is optional. Default is TAB
 Timeout is optional. Default is 0.09 (in seconds)  
 You need to change this only if timeouts occur.
 
+{-o|--overloads}  
+Don't display lines containing overloads (lines with values 9.99999999e+37) or invalid values  
+Applie to `get recordings` only  
+
 **command**  
 This depends on what you want to do  
 - get:  

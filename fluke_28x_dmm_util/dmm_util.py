@@ -22,6 +22,9 @@ def usage():
     print("Options:")
     print("  -p|--port <serial port>    Mandatory port name (e.g.: COM3)")
     print("  -s|--separator <separator> Separator for lists and recorded values, defaults to tab '\\t',")
+    print("  -o|--overloads             Don't display recordings lines containing overloads (lines with values "
+          "9.99999999e+37) or invalid values")
+    print("                             Applies to 'get recordings' only")
     print("  -t|--timeout <timeout>     Read timeout. Defaults to 0.09s. Be careful changing this value,")
     print("                             the effect on the total time is important.")
     print("")
@@ -305,7 +308,7 @@ def parse_readings(reading_bytes):
             'attribute': get_map_value('attribute', r, 20),
             'ts': get_time(r, 22)
         }
-    #  print ('------',readings)
+    # print('------', readings, type(readings))
     return readings
 
 
@@ -319,7 +322,7 @@ def get_map_value(map_name, string, offset):
     value = str(get_u16(string, offset))
     if value not in dmm_map:
         raise ValueError('By app: Can not find key %s in map %s' % (value, map_name))
-    # print ("--->",map_name,value,map[value])
+    # print("--->", map_name, value, dmm_map[value], type(dmm_map[value]))
     return dmm_map[value]
 
 
@@ -604,6 +607,11 @@ def do_recordings(records):
             for k in range(0, recording['num_samples']):
                 measurement = qsrr(str(recording['reading_index']), str(k))
                 # print ('measurement',measurement)
+                if overloads and \
+                   (measurement['readings2']['PRIMARY']['value'] == 9.99999999e+37 or \
+                    measurement['readings']['MAXIMUM']['value'] == 9.99999999e+37 or \
+                    measurement['readings']['MINIMUM']['value'] == 9.99999999e+37):
+                   continue
                 duration = str(round(measurement['readings']['AVERAGE']['value']
                                      / measurement['duration'], measurement['readings']['AVERAGE']['decimals'])) \
                     if measurement['duration'] != 0 else 0
@@ -637,6 +645,11 @@ def do_recordings(records):
                     for k in range(0, recording['num_samples']):
                         measurement = qsrr(str(recording['reading_index']), str(k))
                         #            print ('measurement',measurement)
+                        if overloads and \
+                           (measurement['readings2']['PRIMARY']['value'] == 9.99999999e+37 or \
+                            measurement['readings']['MAXIMUM']['value'] == 9.99999999e+37 or \
+                            measurement['readings']['MINIMUM']['value'] == 9.99999999e+37):
+                           continue
                         duration = str(round(measurement['readings']['AVERAGE']['value']
                                              / measurement['duration'],
                                              measurement['readings']['AVERAGE']['decimals'])) \
@@ -741,11 +754,13 @@ def main():
     global sep
     global timeout
     global port
+    global overloads
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port", help="usb port used (Mandatory)")
     parser.add_argument("-s", "--separator", help="custom separator (defaults to \\t")
     parser.add_argument("-t", "--timeout", help="custom timeout (defaults to 0.09s)")
+    parser.add_argument("-o", "--overloads", help="don't display lines containing overloads", action="store_true")
     parser.add_argument("-v", "--version", help="show version and exit", action="store_true")
     parser.add_argument("command", nargs="*", help="command used")
     args = parser.parse_args()
@@ -761,6 +776,9 @@ def main():
     if args.version:
         version()
         sys.exit()
+
+    if args.overloads:
+        overloads = True
 
     if len(args.command) == 0:
         usage()
@@ -813,3 +831,4 @@ timeout = 0.09
 map_cache = {}
 ser = serial.Serial()
 port = ''
+overloads = False
