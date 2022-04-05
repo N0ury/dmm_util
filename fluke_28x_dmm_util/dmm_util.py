@@ -6,7 +6,7 @@ import time
 import struct
 import sys
 import datetime
-from calendar import timegm
+import calendar
 import argparse
 import fluke_28x_dmm_util
 import binascii
@@ -90,7 +90,7 @@ def start_serial():
 
 
 def do_sync_time():
-    lt = timegm(datetime.datetime.now().utctimetuple())
+    lt = calendar.timegm(datetime.datetime.now().utctimetuple())
     cmd = 'mp clock,' + str(lt)
     ser.write(cmd.encode() + b'\r')
     time.sleep(0.1)
