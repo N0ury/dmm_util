@@ -608,10 +608,10 @@ def do_recordings(records):
                 measurement = qsrr(str(recording['reading_index']), str(k))
                 # print ('measurement',measurement)
                 if overloads and \
-                   (measurement['readings2']['PRIMARY']['value'] == 9.99999999e+37 or \
-                    measurement['readings']['MAXIMUM']['value'] == 9.99999999e+37 or \
-                    measurement['readings']['MINIMUM']['value'] == 9.99999999e+37):
-                   continue
+                        (measurement['readings2']['PRIMARY']['value'] == 9.99999999e+37 or
+                         measurement['readings']['MAXIMUM']['value'] == 9.99999999e+37 or
+                         measurement['readings']['MINIMUM']['value'] == 9.99999999e+37):
+                    continue
                 duration = str(round(measurement['readings']['AVERAGE']['value']
                                      / measurement['duration'], measurement['readings']['AVERAGE']['decimals'])) \
                     if measurement['duration'] != 0 else 0
@@ -646,10 +646,10 @@ def do_recordings(records):
                         measurement = qsrr(str(recording['reading_index']), str(k))
                         #            print ('measurement',measurement)
                         if overloads and \
-                           (measurement['readings2']['PRIMARY']['value'] == 9.99999999e+37 or \
-                            measurement['readings']['MAXIMUM']['value'] == 9.99999999e+37 or \
-                            measurement['readings']['MINIMUM']['value'] == 9.99999999e+37):
-                           continue
+                                (measurement['readings2']['PRIMARY']['value'] == 9.99999999e+37 or
+                                 measurement['readings']['MAXIMUM']['value'] == 9.99999999e+37 or
+                                 measurement['readings']['MINIMUM']['value'] == 9.99999999e+37):
+                            continue
                         duration = str(round(measurement['readings']['AVERAGE']['value']
                                              / measurement['duration'],
                                              measurement['readings']['AVERAGE']['decimals'])) \
